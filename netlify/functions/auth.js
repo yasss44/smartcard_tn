@@ -1,6 +1,7 @@
 // Netlify serverless function for authentication
 const axios = require('axios');
 const https = require('https');
+const got = require('got');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -77,83 +78,40 @@ exports.handler = async (event, context) => {
     try {
       // Special handling for profile endpoint
       if (segments.length > 0 && segments[0] === 'profile') {
-        console.log('Using native https for profile request');
-
-        // Create a promise-based https request
-        const makeRequest = () => {
-          return new Promise((resolve, reject) => {
-            const requestOptions = {
-              hostname: 'smart-card.tn',
-              port: 443,
-              path: `/api/auth${path}`,
-              method: method.toLowerCase(),
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Origin': 'https://smartcardbeta.netlify.app',
-                'User-Agent': 'Netlify Function'
-              },
-              rejectUnauthorized: false // Bypass SSL certificate verification
-            };
-
-            // Add authorization header if it exists
-            if (authHeader) {
-              requestOptions.headers['Authorization'] = authHeader;
-            }
-
-            console.log('Profile request options:', JSON.stringify(requestOptions));
-
-            const req = https.request(requestOptions, (res) => {
-              console.log('Profile response status code:', res.statusCode);
-              console.log('Profile response headers:', JSON.stringify(res.headers));
-
-              let responseBody = '';
-
-              res.on('data', (chunk) => {
-                responseBody += chunk;
-              });
-
-              res.on('end', () => {
-                console.log('Profile response body length:', responseBody.length);
-                try {
-                  const parsedBody = JSON.parse(responseBody);
-                  resolve({
-                    statusCode: res.statusCode,
-                    headers: res.headers,
-                    body: parsedBody
-                  });
-                } catch (error) {
-                  console.error('Error parsing profile response body:', error);
-                  console.error('Raw profile response body:', responseBody);
-                  reject(new Error('Invalid JSON response from API'));
-                }
-              });
-            });
-
-            req.on('error', (error) => {
-              console.error('Profile request error:', error);
-              reject(error);
-            });
-
-            // Set a timeout
-            req.setTimeout(30000, () => {
-              req.abort();
-              reject(new Error('Profile request timed out'));
-            });
-
-            // Write the request body if it exists
-            if (data) {
-              const requestBody = JSON.stringify(data);
-              req.write(requestBody);
-            }
-
-            req.end();
-          });
-        };
+        console.log('Using got for profile request');
 
         try {
-          const response = await makeRequest();
+          // Prepare headers
+          const gotHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': 'https://smartcardbeta.netlify.app',
+            'User-Agent': 'Netlify Function'
+          };
+
+          // Add authorization header if it exists
+          if (authHeader) {
+            gotHeaders['Authorization'] = authHeader;
+          }
+
+          console.log('Profile request URL:', `https://smart-card.tn/api/auth${path}`);
+          console.log('Profile request headers:', JSON.stringify(gotHeaders));
+
+          const response = await got(`https://smart-card.tn/api/auth${path}`, {
+            method: method.toLowerCase(),
+            headers: gotHeaders,
+            json: data || undefined,
+            https: {
+              rejectUnauthorized: false // Bypass SSL certificate verification
+            },
+            timeout: {
+              request: 30000 // 30 second timeout
+            },
+            responseType: 'json'
+          });
+
           console.log('Profile request successful, response status:', response.statusCode);
+          console.log('Profile response body:', JSON.stringify(response.body));
 
           // Return the response
           return {
@@ -164,6 +122,12 @@ exports.handler = async (event, context) => {
         } catch (profileError) {
           console.error('Profile API request error:', profileError.message);
           console.error('Profile API error stack:', profileError.stack);
+
+          // Log more details about the error
+          if (profileError.response) {
+            console.error('Profile API response status:', profileError.response.statusCode);
+            console.error('Profile API response body:', profileError.response.body);
+          }
 
           return {
             statusCode: 500,

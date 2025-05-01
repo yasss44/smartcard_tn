@@ -1,5 +1,5 @@
 // Netlify serverless function for login
-const https = require('https');
+const got = require('got');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -56,76 +56,32 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Forward the request to the actual API using native https module
+    // Forward the request to the actual API using got
     console.log('Forwarding login request to smart-card.tn');
 
-    // Create a promise-based https request
-    const makeRequest = () => {
-      return new Promise((resolve, reject) => {
-        const requestOptions = {
-          hostname: 'smart-card.tn',
-          port: 443,
-          path: '/api/auth/login',
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Origin': 'https://smartcardbeta.netlify.app',
-            'User-Agent': 'Netlify Function'
-          },
-          rejectUnauthorized: false // Bypass SSL certificate verification
-        };
-
-        console.log('Request options:', JSON.stringify(requestOptions));
-
-        const req = https.request(requestOptions, (res) => {
-          console.log('Response status code:', res.statusCode);
-          console.log('Response headers:', JSON.stringify(res.headers));
-
-          let responseBody = '';
-
-          res.on('data', (chunk) => {
-            responseBody += chunk;
-          });
-
-          res.on('end', () => {
-            console.log('Response body length:', responseBody.length);
-            try {
-              const parsedBody = JSON.parse(responseBody);
-              resolve({
-                statusCode: res.statusCode,
-                headers: res.headers,
-                body: parsedBody
-              });
-            } catch (error) {
-              console.error('Error parsing response body:', error);
-              console.error('Raw response body:', responseBody);
-              reject(new Error('Invalid JSON response from API'));
-            }
-          });
-        });
-
-        req.on('error', (error) => {
-          console.error('Request error:', error);
-          reject(error);
-        });
-
-        // Set a timeout
-        req.setTimeout(30000, () => {
-          req.abort();
-          reject(new Error('Request timed out'));
-        });
-
-        // Write the request body
-        const requestBody = JSON.stringify(data);
-        req.write(requestBody);
-        req.end();
-      });
-    };
-
     try {
-      const response = await makeRequest();
+      console.log('Attempting got request to:', 'https://smart-card.tn/api/auth/login');
+      console.log('With data:', { email: data.email, password: '***' });
+
+      const response = await got.post('https://smart-card.tn/api/auth/login', {
+        json: data,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://smartcardbeta.netlify.app',
+          'User-Agent': 'Netlify Function'
+        },
+        https: {
+          rejectUnauthorized: false // Bypass SSL certificate verification
+        },
+        timeout: {
+          request: 30000 // 30 second timeout
+        },
+        responseType: 'json'
+      });
+
       console.log('Login successful, response status:', response.statusCode);
+      console.log('Response body:', JSON.stringify(response.body));
 
       // Return the response
       return {
