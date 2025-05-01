@@ -36,97 +36,21 @@ exports.handler = async (event, context) => {
   console.log('Orders HTTP method:', method);
 
   try {
-    // Handle GET /orders - Get all orders for a user
-    if (method === 'GET' && segments.length === 0) {
-      console.log('Creating mock orders response for testing');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify([
-          {
-            id: 1,
-            quantity: 1,
-            total_price: 35,
-            status: 'pending',
-            plan_type: 'standard',
-            card_created: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            shipping_address: '123 Main St, Tunis, Tunisia',
-            phone_number: '+216 12 345 678',
-            payment_method: 'cash_on_delivery',
-            UserId: 1,
-            CardId: null,
-            custom_url_name: 'my-card'
-          },
-          {
-            id: 2,
-            quantity: 2,
-            total_price: 90,
-            status: 'delivered',
-            plan_type: 'logo',
-            card_created: true,
-            card_id: 1,
-            CardId: 1,
-            card_title: 'My Digital Card',
-            unique_url: 'test-card',
-            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-            shipping_address: '456 Oak St, Sfax, Tunisia',
-            phone_number: '+216 98 765 432',
-            payment_method: 'cash_on_delivery',
-            UserId: 1,
-            custom_url_name: 'business-card'
-          },
-          {
-            id: 3,
-            quantity: 1,
-            total_price: 55,
-            status: 'shipped',
-            plan_type: 'full',
-            card_created: false,
-            created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            shipping_address: '789 Pine St, Sousse, Tunisia',
-            phone_number: '+216 55 123 456',
-            payment_method: 'cash_on_delivery',
-            UserId: 1,
-            CardId: null,
-            custom_url_name: 'premium-card'
-          }
-        ])
-      };
-    }
+    // Forward the request to the actual API
+    console.log('Forwarding orders request to smart-card.tn');
+    const API_URL = 'https://smart-card.tn/api';
+    const url = `${API_URL}/orders${path}`;
 
-    // Handle GET /orders/:id - Get an order by ID
-    if (method === 'GET' && segments.length === 1) {
-      const orderId = segments[0];
-      console.log(`Creating mock order response for ID: ${orderId}`);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          id: parseInt(orderId),
-          quantity: 1,
-          total_price: 35,
-          status: 'pending',
-          plan_type: 'standard',
-          card_created: false,
-          created_at: new Date().toISOString(),
-          shipping_address: '123 Main St, Tunis, Tunisia',
-          phone: '+216 12 345 678'
-        })
-      };
-    }
+    console.log('Forwarding orders request to:', url);
 
-    // Handle POST /orders - Create a new order
-    if (method === 'POST' && segments.length === 0) {
-      let data;
+    // Get the request body if it exists
+    let data = null;
+    if (event.body) {
       try {
         data = JSON.parse(event.body);
-        console.log('Create order request data:', data);
+        console.log('Orders request data:', data);
       } catch (error) {
-        console.error('Error parsing create order request body:', error);
+        console.error('Error parsing orders request body:', error);
         return {
           statusCode: 400,
           headers,
@@ -137,70 +61,59 @@ exports.handler = async (event, context) => {
           })
         };
       }
-
-      console.log('Creating mock new order response');
-      return {
-        statusCode: 201,
-        headers,
-        body: JSON.stringify({
-          id: 3,
-          quantity: data.quantity || 1,
-          total_price: data.total_price || 35,
-          status: 'pending',
-          plan_type: data.plan_type || 'standard',
-          card_created: false,
-          created_at: new Date().toISOString(),
-          shipping_address: data.shipping_address || '123 Main St, Tunis, Tunisia',
-          phone: data.phone || '+216 12 345 678'
-        })
-      };
     }
 
-    // Handle PUT /orders/:id/card-created - Update order card created status
-    if (method === 'PUT' && segments.length === 2 && segments[1] === 'card-created') {
-      const orderId = segments[0];
-      let data;
-      try {
-        data = JSON.parse(event.body);
-        console.log(`Update order card created status for ID: ${orderId}`, data);
-      } catch (error) {
-        console.error('Error parsing update order request body:', error);
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            message: 'Invalid request body',
-            error: error.message,
-            body: event.body
-          })
-        };
-      }
-
-      console.log(`Creating mock update order card created response for ID: ${orderId}`);
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          id: parseInt(orderId),
-          card_created: data.card_created || true,
-          card_id: data.card_id || 1,
-          updated_at: new Date().toISOString(),
-          message: 'Order updated successfully'
-        })
-      };
-    }
-
-    // Handle other orders requests
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        message: 'Mock orders endpoint response',
-        path: path,
-        method: method,
-        segments: segments
-      })
+    // Get authorization header if it exists
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    const requestHeaders = {
+      'Content-Type': 'application/json'
     };
+    if (authHeader) {
+      requestHeaders.Authorization = authHeader;
+    }
+
+    // Make the request to the actual API
+    try {
+      const response = await axios({
+        method: method.toLowerCase(),
+        url,
+        data,
+        headers: requestHeaders,
+        timeout: 30000 // 30 second timeout
+      });
+
+      console.log('Orders request successful');
+
+      // Return the response
+      return {
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify(response.data)
+      };
+    } catch (apiError) {
+      console.error('API request error:', apiError.message);
+      console.error('API error code:', apiError.code);
+      console.error('API error stack:', apiError.stack);
+
+      if (apiError.response) {
+        console.error('API response status:', apiError.response.status);
+        console.error('API response headers:', JSON.stringify(apiError.response.headers));
+        console.error('API response data:', JSON.stringify(apiError.response.data));
+      } else if (apiError.request) {
+        console.error('No response received, request details:', apiError.request._currentUrl);
+      }
+
+      return {
+        statusCode: apiError.response?.status || 500,
+        headers,
+        body: JSON.stringify({
+          message: apiError.response?.data?.message || 'Orders request failed',
+          error: apiError.message,
+          code: apiError.code,
+          details: apiError.response?.data || 'No response data'
+        })
+      };
+    }
   } catch (error) {
     console.error('Orders function error:', error.message);
     console.error('Error stack:', error.stack);

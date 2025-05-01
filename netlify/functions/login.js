@@ -57,28 +57,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // For now, let's create a mock response for testing
-    console.log('Creating mock login response for testing');
-
-    // Check if this is an admin login
-    const isAdmin = data.email.includes('admin') || data.email === 'yassin@gmail.com';
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        token: 'mock-token-for-testing',
-        user: {
-          id: 1,
-          name: isAdmin ? 'Admin User' : 'Test User',
-          email: data.email,
-          is_admin: isAdmin
-        },
-        message: 'Mock login successful'
-      })
-    };
-
-    /* Temporarily commented out real API connection for debugging
+    // Forward the request to the actual API
     console.log('Forwarding login request to smart-card.tn');
     try {
       console.log('Attempting axios request to:', 'https://smart-card.tn/api/auth/login');
@@ -127,7 +106,6 @@ exports.handler = async (event, context) => {
         })
       };
     }
-    */
   } catch (error) {
     console.error('Login function error:', error.message);
     console.error('Error stack:', error.stack);

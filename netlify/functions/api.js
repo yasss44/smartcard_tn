@@ -45,53 +45,84 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Handle cards endpoints with mock data
-    if (segments[0] === 'cards') {
-      console.log('Creating mock cards response for testing');
+    // Forward the request to the actual API
+    console.log('Forwarding API request to smart-card.tn');
+    const API_URL = 'https://smart-card.tn/api';
+    const url = `${API_URL}${path}`;
 
-      // Handle GET /cards
-      if (method === 'GET' && segments.length === 1) {
+    console.log('Forwarding request to:', url);
+
+    // Get the request body if it exists
+    let data = null;
+    if (event.body) {
+      try {
+        data = JSON.parse(event.body);
+        console.log('API request data:', data);
+      } catch (error) {
+        console.error('Error parsing request body:', error);
         return {
-          statusCode: 200,
+          statusCode: 400,
           headers,
-          body: JSON.stringify([
-            {
-              id: 1,
-              title: 'My Digital Card',
-              uniqueUrl: 'test-card',
-              links: [
-                { id: 1, title: 'Website', url: 'https://example.com', icon: 'globe' },
-                { id: 2, title: 'LinkedIn', url: 'https://linkedin.com', icon: 'linkedin' }
-              ],
-              theme: { primary: '#3B82F6', background: '#0F172A' }
-            }
-          ])
+          body: JSON.stringify({
+            message: 'Invalid request body',
+            error: error.message,
+            body: event.body
+          })
         };
       }
+    }
 
-      // Handle other cards requests
+    // Get authorization header if it exists
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    const requestHeaders = {
+      'Content-Type': 'application/json'
+    };
+    if (authHeader) {
+      requestHeaders.Authorization = authHeader;
+    }
+
+    // Make the request to the actual API
+    try {
+      const response = await axios({
+        method: method.toLowerCase(),
+        url,
+        data,
+        headers: requestHeaders,
+        timeout: 30000 // 30 second timeout
+      });
+
+      console.log('API request successful');
+
+      // Return the response
       return {
-        statusCode: 200,
+        statusCode: response.status,
+        headers,
+        body: JSON.stringify(response.data)
+      };
+    } catch (apiError) {
+      console.error('API request error:', apiError.message);
+      console.error('API error code:', apiError.code);
+      console.error('API error stack:', apiError.stack);
+
+      if (apiError.response) {
+        console.error('API response status:', apiError.response.status);
+        console.error('API response headers:', JSON.stringify(apiError.response.headers));
+        console.error('API response data:', JSON.stringify(apiError.response.data));
+      } else if (apiError.request) {
+        console.error('No response received, request details:', apiError.request._currentUrl);
+      }
+
+      return {
+        statusCode: apiError.response?.status || 500,
         headers,
         body: JSON.stringify({
-          message: 'Mock cards endpoint response',
-          path: path,
-          method: method
+          message: apiError.response?.data?.message || 'API request failed',
+          error: apiError.message,
+          code: apiError.code,
+          details: apiError.response?.data || 'No response data'
         })
       };
     }
-
-    // For other API endpoints, return a mock response
-    console.log('Creating mock API response for testing');
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        message: 'Mock API endpoint response',
-        path: path,
-        method: method
-      })
-    };
   } catch (error) {
     console.error('API function error:', error.message);
     console.error('Error stack:', error.stack);
