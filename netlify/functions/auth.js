@@ -1,5 +1,6 @@
 // Netlify serverless function for authentication
 const axios = require('axios');
+const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -36,7 +37,7 @@ exports.handler = async (event, context) => {
   console.log('Auth HTTP method:', method);
 
   try {
-    // Forward the request to the actual API
+    // Forward all auth endpoints to the real API
     console.log('Forwarding auth request to smart-card.tn');
     const API_URL = 'https://smart-card.tn/api/auth';
     const url = `${API_URL}${path}`;
@@ -74,43 +75,74 @@ exports.handler = async (event, context) => {
 
     // Make the request to the actual API
     try {
-      const response = await axios({
-        method: method.toLowerCase(),
-        url,
-        data,
-        headers: requestHeaders,
-        timeout: 30000 // 30 second timeout
-      });
+      // Special handling for profile endpoint
+      if (segments.length > 0 && segments[0] === 'profile') {
+        console.log('Using fetch for profile request');
 
-      console.log('Auth request successful');
+        const fetchOptions = {
+          method: method.toLowerCase(),
+          headers: {
+            ...requestHeaders,
+            'Accept': 'application/json',
+            'Origin': 'https://smartcardbeta.netlify.app'
+          },
+          timeout: 30000 // 30 second timeout
+        };
 
-      // Return the response
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify(response.data)
-      };
+        if (data) {
+          fetchOptions.body = JSON.stringify(data);
+        }
+
+        console.log('Fetch options for profile:', { ...fetchOptions, body: fetchOptions.body ? '***' : undefined });
+
+        const response = await fetch(url, fetchOptions);
+
+        console.log('Profile response status:', response.status);
+        console.log('Profile response headers:', JSON.stringify(Object.fromEntries([...response.headers])));
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        console.log('Profile request successful, response data:', JSON.stringify(responseData));
+
+        return {
+          statusCode: response.status,
+          headers,
+          body: JSON.stringify(responseData)
+        };
+      } else {
+        // Use axios for other endpoints
+        const response = await axios({
+          method: method.toLowerCase(),
+          url,
+          data,
+          headers: requestHeaders,
+          timeout: 30000 // 30 second timeout
+        });
+
+        console.log('Auth request successful');
+
+        // Return the response
+        return {
+          statusCode: response.status,
+          headers,
+          body: JSON.stringify(response.data)
+        };
+      }
     } catch (apiError) {
       console.error('API request error:', apiError.message);
-      console.error('API error code:', apiError.code);
       console.error('API error stack:', apiError.stack);
-
-      if (apiError.response) {
-        console.error('API response status:', apiError.response.status);
-        console.error('API response headers:', JSON.stringify(apiError.response.headers));
-        console.error('API response data:', JSON.stringify(apiError.response.data));
-      } else if (apiError.request) {
-        console.error('No response received, request details:', apiError.request._currentUrl);
-      }
+      console.error('Full error object:', JSON.stringify(apiError, Object.getOwnPropertyNames(apiError)));
 
       return {
-        statusCode: apiError.response?.status || 500,
+        statusCode: 500,
         headers,
         body: JSON.stringify({
-          message: apiError.response?.data?.message || 'Auth request failed',
+          message: 'Auth request failed',
           error: apiError.message,
-          code: apiError.code,
-          details: apiError.response?.data || 'No response data'
+          stack: apiError.stack
         })
       };
     }

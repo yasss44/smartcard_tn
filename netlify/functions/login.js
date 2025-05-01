@@ -1,5 +1,6 @@
 // Netlify serverless function for login
 const axios = require('axios');
+const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -60,49 +61,52 @@ exports.handler = async (event, context) => {
     // Forward the request to the actual API
     console.log('Forwarding login request to smart-card.tn');
     try {
-      console.log('Attempting axios request to:', 'https://smart-card.tn/api/auth/login');
+      console.log('Attempting fetch request to:', 'https://smart-card.tn/api/auth/login');
       console.log('With data:', { email: data.email, password: '***' });
 
-      const response = await axios({
-        method: 'post',
-        url: 'https://smart-card.tn/api/auth/login',
-        data,
+      const fetchOptions = {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://smartcardbeta.netlify.app'
         },
+        body: JSON.stringify(data),
         timeout: 30000 // 30 second timeout
-      });
+      };
 
-      console.log('Login successful, response status:', response.status);
-      console.log('Response data:', JSON.stringify(response.data));
+      console.log('Fetch options:', { ...fetchOptions, body: '***' });
+
+      const response = await fetch('https://smart-card.tn/api/auth/login', fetchOptions);
+
+      console.log('Login response status:', response.status);
+      console.log('Login response headers:', JSON.stringify(Object.fromEntries([...response.headers])));
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Login successful, response data:', JSON.stringify(responseData));
 
       // Return the response
       return {
-        statusCode: 200,
+        statusCode: response.status,
         headers,
-        body: JSON.stringify(response.data)
+        body: JSON.stringify(responseData)
       };
     } catch (apiError) {
       console.error('API request error:', apiError.message);
-      console.error('API error code:', apiError.code);
       console.error('API error stack:', apiError.stack);
-
-      if (apiError.response) {
-        console.error('API response status:', apiError.response.status);
-        console.error('API response headers:', JSON.stringify(apiError.response.headers));
-        console.error('API response data:', JSON.stringify(apiError.response.data));
-      } else if (apiError.request) {
-        console.error('No response received, request details:', apiError.request._currentUrl);
-      }
+      console.error('Full error object:', JSON.stringify(apiError, Object.getOwnPropertyNames(apiError)));
 
       return {
-        statusCode: apiError.response?.status || 500,
+        statusCode: 500,
         headers,
         body: JSON.stringify({
-          message: apiError.response?.data?.message || 'Login failed',
+          message: 'Login failed',
           error: apiError.message,
-          code: apiError.code,
-          details: apiError.response?.data || 'No response data'
+          stack: apiError.stack
         })
       };
     }
