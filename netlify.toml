@@ -15,6 +15,16 @@ to = "/.netlify/functions/auth/:splat"
 status = 200
 
 [[redirects]]
+from = "/api/cards"
+to = "/.netlify/functions/cards"
+status = 200
+
+[[redirects]]
+from = "/api/cards/*"
+to = "/.netlify/functions/cards/:splat"
+status = 200
+
+[[redirects]]
 from = "/api/*"
 to = "/.netlify/functions/api/:splat"
 status = 200
