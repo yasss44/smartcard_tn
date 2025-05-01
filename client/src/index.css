@@ -1,0 +1,371 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Fix for touch interactions with 3D elements */
+canvas {
+  touch-action: none;
+}
+
+/* Fix for mobile editor spinning issue */
+@media (max-width: 768px) {
+  .editor-container {
+    touch-action: pan-y;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .editor-container canvas {
+    touch-action: pan-y;
+  }
+
+  /* Prevent horizontal scrolling on mobile */
+  body {
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  /* Make buttons more mobile-friendly */
+  .btn-stylish, .btn {
+    min-height: 44px; /* Minimum touch target size */
+  }
+}
+
+/* Mobile menu animation */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.3s ease-out forwards;
+}
+
+/* 3D Card Styles */
+.glass {
+  background: transparent;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2), inset 0 0 15px rgba(236, 72, 153, 0.2);
+}
+
+/* Hero Section Styles */
+.hero-section {
+  background-color: transparent; /* Makes container transparent */
+  position: relative; /* Needed for absolute positioning of children */
+}
+
+.hero-content {
+  /* Your existing text styles */
+  color: white; /* Ensure text is visible */
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Improves readability */
+  padding: 2rem;
+}
+
+/* If you have a background image/color to remove */
+.hero-background {
+  display: none; /* Remove any existing background element */
+}
+
+.hero-gradient-overlay {
+  background: linear-gradient(to top, rgba(15, 23, 42, 1) 0%, rgba(15, 23, 42, 0.8) 50%, rgba(15, 23, 42, 0) 100%);
+}
+
+.card-glow-effect {
+  box-shadow: 0 0 15px 2px rgba(59, 130, 246, 0.5);
+  transition: box-shadow 0.5s ease-in-out;
+}
+
+.card-glow-effect:hover {
+  box-shadow: 0 0 25px 5px rgba(59, 130, 246, 0.7);
+}
+
+@keyframes float-animation {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.float-animation {
+  animation: float-animation 6s ease-in-out infinite;
+}
+
+/* Neon text effects */
+.neon-blue {
+  color: #3b82f6;
+  text-shadow: 0 0 5px rgba(59, 130, 246, 0.5), 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.neon-pink {
+  color: #ec4899;
+  text-shadow: 0 0 5px rgba(236, 72, 153, 0.5), 0 0 10px rgba(236, 72, 153, 0.3);
+}
+
+.neon-cyan {
+  color: #06b6d4;
+  text-shadow: 0 0 5px rgba(6, 182, 212, 0.5), 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.neon-purple {
+  color: #8b5cf6;
+  text-shadow: 0 0 5px rgba(139, 92, 246, 0.5), 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+/* Animation for the 3D card */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Animation styles moved from Editor.tsx */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.4s ease-out forwards;
+}
+
+/* Button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-cyan {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.btn-cyan:hover {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+  transform: translateY(-1px);
+}
+
+/* New Stylish Button Styles */
+.btn-stylish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.5rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease-in-out;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  outline: none;
+}
+
+.btn-stylish-primary {
+  background: linear-gradient(to right, #06b6d4, #2563eb);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: perspective(1px) translateZ(0);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.btn-stylish-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.25);
+}
+
+.btn-stylish-secondary {
+  background: linear-gradient(to right, #8b5cf6, #ec4899);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: perspective(1px) translateZ(0);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.btn-stylish-secondary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(139, 92, 246, 0.25);
+}
+
+.btn-stylish-action {
+  background: linear-gradient(to right, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: perspective(1px) translateZ(0);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.btn-stylish-action:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25);
+}
+
+.btn-stylish-danger {
+  background: linear-gradient(to right, #ef4444, #e11d48);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: perspective(1px) translateZ(0);
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+.btn-stylish-danger:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+}
+
+.btn-stylish-icon {
+  padding: 0.75rem;
+  border-radius: 9999px;
+}
+
+.btn-stylish-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-pink {
+  background: linear-gradient(135deg, #ec4899, #be185d);
+  color: white;
+  box-shadow: 0 0 10px rgba(236, 72, 153, 0.3);
+}
+
+.btn-pink:hover {
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Focus styles for buttons */
+.btn-stylish:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Hover effect styles for buttons */
+.btn-stylish-primary:hover {
+  background: linear-gradient(to right, #0891b2, #1d4ed8);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-stylish-secondary:hover {
+  background: linear-gradient(to right, #7c3aed, #db2777);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-stylish-action:hover {
+  background: linear-gradient(to right, #059669, #047857);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-stylish-danger:hover {
+  background: linear-gradient(to right, #dc2626, #be123c);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+
+@keyframes glow-box-shadow {
+  0% { box-shadow: 0 0 5px rgba(6, 182, 212, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(6, 182, 212, 0.5); }
+}
+
+.animate-glow {
+  animation: glow-box-shadow 2s infinite;
+}
+
+@keyframes glow-filter {
+  0% {
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(236, 72, 153, 0.7));
+  }
+  100% {
+    filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.5));
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 5s ease-in-out forwards;
+}
+
+\n/* NFC Card Container Responsive Styles */
+@media (max-width: 768px) {
+  .nfc-card-container {
+    transform: scale(0.5);
+    transform-origin: center top;
+    width: 291px !important;
+    height: 275px !important;
+  }
+
+  .nfc-card-container canvas {
+    width: 291px !important;
+    height: 275px !important;
+  }
+}

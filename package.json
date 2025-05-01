@@ -1,0 +1,62 @@
+{
+  "name": "nfc-business-cards",
+  "version": "1.0.0",
+  "description": "A web application for creating and managing customizable NFC business cards",
+  "main": "server.js",
+  "scripts": {
+    "client": "cd client && npm run dev",
+    "server": "cd server && npm run dev",
+    "start": "node server.js",
+    "start:no-db": "SKIP_DB_CONNECTION=true node server.js",
+    "start:simple": "node server.simple.js",
+    "start:minimal": "node server.minimal.js",
+    "start:ultra": "node server.ultra.js",
+    "dev:app": "nodemon server.js",
+    "dev:app:no-db": "nodemon -r dotenv/config server.js dotenv_config_path=.env.no-db",
+    "dev:app:simple": "nodemon server.simple.js",
+    "dev:app:minimal": "nodemon server.minimal.js",
+    "dev:app:ultra": "nodemon server.ultra.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "init-db": "cd server && npm run init-db",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "build": "cd client && npm run build",
+    "netlify:dev": "netlify dev",
+    "netlify:build": "npm run build && netlify build",
+    "netlify:deploy": "npm run build && netlify deploy",
+    "github:setup": "node setup-github.js"
+  },
+  "keywords": [
+    "nfc",
+    "business-card",
+    "react",
+    "node",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource-variable/manrope": "^5.2.5",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@radix-ui/react-avatar": "^1.1.4",
+    "@radix-ui/react-checkbox": "^1.1.5",
+    "@radix-ui/react-dialog": "^1.1.7",
+    "@radix-ui/react-dropdown-menu": "^2.1.7",
+    "@radix-ui/react-form": "^0.1.3",
+    "@radix-ui/react-popover": "^1.1.7",
+    "@radix-ui/react-select": "^2.1.7",
+    "@radix-ui/react-switch": "^1.1.4",
+    "@radix-ui/react-tabs": "^1.1.4",
+    "@radix-ui/react-toast": "^1.2.7",
+    "@radix-ui/react-tooltip": "^1.2.0",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.9"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.19.0"
+  }
+}

@@ -1,0 +1,1399 @@
+import { useState, useEffect } from 'react';
+import { useDrop } from 'react-dnd';
+import { v4 as uuidv4 } from 'uuid';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faLink, faTrash, faPen, faSave, faTimes, faCheck, faMobile, faDesktop, faInfoCircle, faUpload, faPrint } from '@fortawesome/free-solid-svg-icons';
+import LinkItem from './LinkItem';
+import BackgroundSelector from './BackgroundSelector';
+import ColorPicker from './ColorPicker';
+
+// Import fonts
+import '@fontsource/manrope/600.css';
+import '@fontsource/inter/400.css';
+
+interface Link {
+  id: string;
+  title: string;
+  url: string;
+  icon: string;
+}
+
+interface CardEditorProps {
+  initialData?: {
+    title: string;
+    background: string;
+    links: Link[];
+    colors: {
+      background: string;
+      text: string;
+      button: string;
+    };
+  };
+  onSave: (cardData: any) => void;
+}
+
+const CardEditor = ({ initialData, onSave }: CardEditorProps) => {
+  const [title, setTitle] = useState(initialData?.title || 'My NFC Card');
+  const [background, setBackground] = useState(initialData?.background || '');
+  const [links, setLinks] = useState<Link[]>(initialData?.links || []);
+  const [colors, setColors] = useState(
+    initialData?.colors || {
+      background: '#ffffff',
+      text: '#000000',
+      button: '#3b82f6',
+    }
+  );
+  const [newLink, setNewLink] = useState({
+    title: '',
+    url: '',
+    icon: 'link',
+  });
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('mobile');
+  const [currentStep, setCurrentStep] = useState(1);
+  const [titleError, setTitleError] = useState('');
+  const [showToast, setShowToast] = useState<{visible: boolean, message: string, type: 'success' | 'error'}>({visible: false, message: '', type: 'success'});
+  const [uploadProgress, setUploadProgress] = useState(0); // For background upload progress
+  const [isUploading, setIsUploading] = useState(false); // Track upload state
+  const [isMobile, setIsMobile] = useState(false); // Track mobile state
+
+  // Show toast notification
+  const displayToast = (message: string, type: 'success' | 'error') => {
+    setShowToast({visible: true, message, type});
+    setTimeout(() => setShowToast({visible: false, message: '', type: 'success'}), 3000);
+  };
+
+  // DnD drop functionality
+  const [, drop] = useDrop({
+    accept: 'LINK',
+    drop: () => ({ name: 'LinkDropArea' }),
+  });
+
+  // Handle link form submission
+  const handleAddLink = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (editingLinkId) {
+      // Update existing link
+      setLinks(
+        links.map((link) =>
+          link.id === editingLinkId
+            ? { ...link, ...newLink }
+            : link
+        )
+      );
+      setEditingLinkId(null);
+    } else {
+      // Add new link
+      setLinks([...links, { id: uuidv4(), ...newLink }]);
+    }
+
+    // Reset form
+    setNewLink({ title: '', url: '', icon: 'link' });
+  };
+
+  // Edit link
+  const handleEditLink = (id: string) => {
+    const linkToEdit = links.find((link) => link.id === id);
+    if (linkToEdit) {
+      setNewLink({
+        title: linkToEdit.title,
+        url: linkToEdit.url,
+        icon: linkToEdit.icon,
+      });
+      setEditingLinkId(id);
+    }
+  };
+
+  // Delete link
+  const handleDeleteLink = (id: string) => {
+    setLinks(links.filter((link) => link.id !== id));
+  };
+
+  // Move link (reorder)
+  const moveLink = (dragIndex: number, hoverIndex: number) => {
+    const draggedLink = links[dragIndex];
+    const newLinks = [...links];
+    newLinks.splice(dragIndex, 1);
+    newLinks.splice(hoverIndex, 0, draggedLink);
+    setLinks(newLinks);
+  };
+
+  // Save card
+  const handleSave = () => {
+    // Validate required fields
+    if (!title.trim()) {
+      setTitleError('Card title is required');
+      return;
+    }
+
+    onSave({
+      title,
+      background,
+      links,
+      colors,
+    });
+
+    displayToast('Card saved successfully!', 'success');
+  };
+
+  // Handle background upload success
+  const handleBackgroundUpload = (bg: string) => {
+    // Simulate upload progress
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsUploading(false);
+          setBackground(bg);
+          displayToast('Background uploaded successfully!', 'success');
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 100);
+  };
+
+  // Validate title field
+  useEffect(() => {
+    if (title.trim()) {
+      setTitleError('');
+    }
+  }, [title]);
+
+  // Handle step navigation
+  const goToNextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Validate current step before proceeding
+  const validateCurrentStep = () => {
+    if (currentStep === 1) {
+      if (!title.trim()) {
+        setTitleError('Card title is required');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (validateCurrentStep()) {
+      goToNextStep();
+    }
+  };
+
+  // Toggle preview mode between mobile and desktop
+  const togglePreviewMode = () => {
+    setPreviewMode(previewMode === 'mobile' ? 'desktop' : 'mobile');
+  };
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+
+    // Initial check
+    checkIfMobile();
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', checkIfMobile);
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-900 font-inter print:bg-white print:min-h-0 editor-container">
+      <div className="bg-gray-900 sticky top-0 z-10 print:static print:shadow-none">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          {/* Top Navigation Bar */}
+          <div className="flex justify-between items-center mb-6">
+            {/* Logo & Back Button */}
+            <div className="flex items-center gap-4">
+              <a
+                href="/dashboard"
+                className="text-gray-300 hover:text-white font-medium flex items-center gap-2 text-sm transition-colors duration-200 bg-gray-800/50 backdrop-blur-sm px-3 py-2 rounded-lg"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert('Navigate back to Dashboard');
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                Dashboard
+              </a>
+
+              <div className="hidden md:flex items-center gap-2">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 font-bold text-lg">Smart Card Tunisia</span>
+                <span className="text-xs px-2 py-0.5 bg-gray-800 text-gray-400 rounded-md">Card Editor</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+                title="Print Preview"
+              >
+                <FontAwesomeIcon icon={faPrint} />
+              </button>
+              <button
+                onClick={() => setPreviewMode(previewMode === 'mobile' ? 'desktop' : 'mobile')}
+                className="text-gray-300 hover:text-white p-2 rounded-lg hover:bg-gray-800/50 transition-colors duration-200"
+                title={`Switch to ${previewMode === 'mobile' ? 'desktop' : 'mobile'} preview`}
+              >
+                <FontAwesomeIcon icon={previewMode === 'mobile' ? faDesktop : faMobile} />
+              </button>
+            </div>
+          </div>
+
+          {/* Title & Progress Section */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pb-2">
+            <h1 className="text-2xl md:text-3xl font-manrope font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">Create New Card</h1>
+
+            {/* Enhanced Progress Bar - Mobile Optimized */}
+            <div className="progress-bar flex gap-2 sm:gap-4 w-full max-w-md">
+              {[1, 2, 3].map((step) => (
+                <button
+                  key={step}
+                  onClick={() => setCurrentStep(step)}
+                  className="step-container flex-1 flex flex-col items-center focus:outline-none group"
+                  aria-label={`Go to step ${step}`}
+                >
+                  <div className="relative w-full">
+                    <div
+                      className={`step w-full h-1.5 ${step < currentStep ? 'bg-green-500' : step === currentStep ? 'bg-gradient-to-r from-cyan-400 to-purple-500' : 'bg-gray-700'} rounded-full transition-all duration-300`}
+                    />
+                    <div
+                      className={`absolute -top-2 left-1/2 transform -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold ${step <= currentStep ? (step === currentStep ? 'bg-gradient-to-r from-cyan-400 to-purple-500' : 'bg-green-500') : 'bg-gray-700'} text-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-cyan-500/20`}
+                    >
+                      {step < currentStep ? (
+                        <FontAwesomeIcon icon={faCheck} className="text-white text-xs" />
+                      ) : (
+                        step
+                      )}
+                    </div>
+                  </div>
+                  <span className={`text-[10px] sm:text-xs font-medium mt-2 sm:mt-3 ${step === currentStep ? 'text-cyan-400 font-semibold' : 'text-gray-400'} group-hover:text-white transition-colors duration-200`}>
+                    {step === 1 ? (isMobile ? 'Details' : 'Basic Details') :
+                     step === 2 ? 'Appearance' :
+                     'Links'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modern Toast Notification */}
+      {showToast.visible && (
+        <div className="fixed top-4 right-4 z-50 transition-all transform translate-y-0 animate-fade-in-down">
+          <div className={`px-4 py-3 rounded-lg shadow-xl ${showToast.type === 'success' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-pink-500'} text-white backdrop-blur-sm border border-white/10 flex items-center gap-3`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${showToast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+              <FontAwesomeIcon icon={showToast.type === 'success' ? faCheck : faTimes} className="text-white" />
+            </div>
+            <div>
+              <p className="font-medium">{showToast.message}</p>
+            </div>
+            <button
+              onClick={() => setShowToast({...showToast, visible: false})}
+              className="ml-2 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <FontAwesomeIcon icon={faTimes} className="text-xs" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="parent-container flex flex-col lg:flex-row gap-6 p-4 md:p-6 max-w-7xl mx-auto print:block print:max-w-full bg-gray-900 min-h-[calc(100vh-120px)]">
+        {/* Main Content Container - Editor on left, Preview on right */}
+        <style>{`
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .animate-fade-in-down {
+          animation: fadeInDown 0.3s ease-out forwards;
+        }
+
+        @media print {
+          @page {
+            size: portrait;
+            margin: 0.5cm;
+          }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          .print-hide {
+            display: none !important;
+          }
+          .print-break-inside-avoid {
+            break-inside: avoid;
+          }
+          .print-break-after {
+            break-after: page;
+          }
+          /* CMYK color optimization hints */
+          .print-optimize-colors {
+            filter: brightness(0.95) contrast(1.05);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .form-panel {
+            min-width: 400px;
+          }
+        }
+
+        /* Cyberpunk-inspired scrollbar */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.1);
+          border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+          border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #2563eb, #7c3aed);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+          .preview-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+            z-index: 40;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+
+          .preview-panel:hover {
+            transform: scale(1.1);
+          }
+
+          .preview-panel.expanded {
+            width: 90%;
+            height: 70%;
+            border-radius: 16px;
+            bottom: 100px;
+            right: 5%;
+            background: white;
+            color: inherit;
+          }
+        }
+      `}</style>
+        {/* Editor Panel - Now on the left side */}
+        <div className="form-panel w-full lg:w-2/5 space-y-4 print:hidden">
+          {/* Step Content - Only show the current step */}
+      {/* Card Details Section - Step 1 */}
+      <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 transition-all duration-300 ${currentStep === 1 ? 'opacity-100' : 'hidden'}`}>
+        <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+          <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+            <FontAwesomeIcon icon={faInfoCircle} />
+          </span>
+          Card Details
+        </h2>
+
+        <div className="mb-6">
+          <label htmlFor="cardTitle" className="block text-sm font-medium text-gray-300 mb-2">
+            Card Title <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="cardTitle"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g., John's Digital Business Card"
+            className={`w-full px-4 py-3 bg-gray-700 border ${titleError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-600'} rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all shadow-sm text-sm text-white`}
+          />
+          {titleError && <p className="mt-1 text-sm text-red-500">{titleError}</p>}
+        </div>
+
+        <div className="text-xs text-gray-400 bg-gray-700 p-3 rounded-lg border border-gray-600">
+          <p className="flex items-center">
+            <FontAwesomeIcon icon={faInfoCircle} className="mr-2 text-cyan-400" />
+            This title will appear at the top of your digital card
+          </p>
+        </div>
+      </div>
+      {/* Appearance Section - Step 2 */}
+      <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 mt-4 transition-all duration-300 ${currentStep === 2 ? 'opacity-100' : 'hidden'}`}>
+        <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+          <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+            <FontAwesomeIcon icon={faUpload} />
+          </span>
+          Appearance
+        </h2>
+
+        {/* Background Selector Section - Enhanced */}
+        <section aria-labelledby="background-heading" className="mb-6">
+          <h3 className="text-sm font-medium text-gray-300 mb-3">Background Image</h3>
+          <div className="preset-grid grid grid-cols-3 gap-3 mb-4">
+            {/* Preset thumbnails would be rendered by BackgroundSelector */}
+          </div>
+          <div className="upload-btn bg-gray-700 p-5 border-2 border-dashed border-gray-600 rounded-lg text-center cursor-pointer hover:border-cyan-500 transition-colors relative">
+            <BackgroundSelector
+              background={background}
+              onSelect={setBackground}
+              onUpload={handleBackgroundUpload}
+            />
+
+            {/* Upload Progress Indicator */}
+            {isUploading && (
+              <div className="absolute inset-0 bg-gray-800 bg-opacity-80 flex flex-col items-center justify-center">
+                <div className="w-full max-w-xs bg-gray-600 rounded-full h-2.5 mb-2">
+                  <div
+                    className="bg-cyan-500 h-2.5 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-sm text-gray-300 font-medium">Uploading... {uploadProgress}%</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Color Picker Section */}
+        <section aria-labelledby="colors-heading">
+          <ColorPicker colors={colors} onChange={setColors} />
+        </section>
+      </div>
+      {/* Links Section - Step 3 */}
+      <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 mt-4 transition-all duration-300 ${currentStep === 3 ? 'opacity-100' : 'hidden'}`}>
+        <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+          <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+            <FontAwesomeIcon icon={faLink} />
+          </span>
+          NFC Links
+        </h2>
+
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center">
+            <p className="text-sm text-gray-300">Add links to your digital card</p>
+            <button className="ml-2 text-cyan-400 hover:text-cyan-300" title="Learn more about supported formats">
+              <FontAwesomeIcon icon={faInfoCircle} />
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setNewLink({ title: '', url: '', icon: 'link' });
+              setEditingLinkId(null); // Ensure we are adding, not updating
+            }}
+            className="bg-cyan-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all transform hover:scale-105 text-sm font-medium flex items-center gap-1"
+            title="Add New Link"
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <span>Add New</span>
+          </button>
+        </div>
+      {/* Link Form - Improved Layout & Placeholders */}
+        <form onSubmit={handleAddLink} className="mb-6 bg-gray-700 p-5 rounded-lg border border-gray-600 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div className="relative">
+              <label htmlFor="linkTitle" className="block text-sm font-medium text-gray-300 mb-1">
+                Title
+              </label>
+              <input
+                type="text"
+                id="linkTitle"
+                value={newLink.title}
+                onChange={(e) =>
+                  setNewLink({ ...newLink, title: e.target.value })
+                }
+                placeholder="e.g., My Website"
+                className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm shadow-sm text-white"
+                required
+              />
+            </div>
+            <div className="relative">
+              <label htmlFor="linkUrl" className="block text-sm font-medium text-gray-300 mb-1">
+                URL
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  id="linkUrl"
+                  value={newLink.url}
+                  onChange={(e) =>
+                    setNewLink({ ...newLink, url: e.target.value })
+                  }
+                  placeholder="https://example.com"
+                  className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm shadow-sm text-white"
+                  required
+                  pattern="https?://.+"
+                />
+                {/* Visual validation indicator */}
+                {newLink.url && newLink.url.match(/^https?:\/\/.+$/) && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <FontAwesomeIcon icon={faCheck} className="text-green-500" />
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="md:col-span-1">
+              <label htmlFor="linkIcon" className="block text-sm font-medium text-gray-300 mb-1">
+                Icon
+              </label>
+              <div className="relative">
+                <select
+                  id="linkIcon"
+                  value={newLink.icon}
+                  onChange={(e) =>
+                    setNewLink({ ...newLink, icon: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm bg-gray-600 text-white appearance-none shadow-sm"
+                >
+                  <option value="link">Link</option>
+                  <option value="facebook">Facebook</option>
+                  <option value="twitter">Twitter</option>
+                  <option value="instagram">Instagram</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="github">GitHub</option>
+                  <option value="youtube">YouTube</option>
+                  <option value="email">Email</option>
+                  <option value="phone">Phone</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-300">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="md:col-span-1 flex items-end">
+              <button
+                type="submit"
+                className="w-full bg-cyan-600 text-white py-3 px-4 rounded-lg hover:bg-cyan-700 transition-all transform hover:scale-105 text-sm font-medium flex items-center justify-center gap-2 shadow-md"
+              >
+                <FontAwesomeIcon icon={editingLinkId ? faPen : faPlus} />
+                {editingLinkId ? 'Update Link' : 'Add Link'}
+              </button>
+              {editingLinkId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingLinkId(null);
+                    setNewLink({ title: '', url: '', icon: 'link' });
+                  }}
+                  className="ml-2 text-gray-400 hover:text-gray-200 p-2 rounded-md hover:bg-gray-600"
+                  title="Cancel Edit"
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+      {/* Links List - Improved Styling */}
+        <div ref={drop} className="min-h-[200px] border-2 border-dashed border-gray-600 p-6 rounded-lg bg-gray-700 transition-all hover:border-cyan-500 hover:bg-cyan-900/30 shadow-inner group">
+          <div className="space-y-3">
+            {links.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-[180px] text-gray-400 group-hover:scale-105 transition-transform duration-300">
+                <div className="relative mb-4">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full blur-md opacity-30 group-hover:opacity-70 animate-pulse transition-opacity duration-300"></div>
+                  <div className="relative bg-gray-800 p-4 rounded-full">
+                    <FontAwesomeIcon icon={faLink} className="text-4xl text-cyan-400" />
+                  </div>
+                </div>
+                <p className="text-base font-medium text-center mb-2 text-gray-300">Add NFC Links (+)</p>
+                <p className="text-sm text-gray-400 max-w-xs text-center">Drag & drop links here or use the form above</p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="px-3 py-1 bg-blue-900/50 text-blue-400 rounded-full shadow-sm border border-blue-800">Social Media</span>
+                    <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full shadow-sm border border-green-800">Websites</span>
+                    <span className="px-3 py-1 bg-purple-900/50 text-purple-400 rounded-full shadow-sm border border-purple-800">Contact Info</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              links.map((link, index) => (
+                <LinkItem
+                  key={link.id}
+                  id={link.id}
+                  index={index}
+                  title={link.title}
+                  url={link.url}
+                  icon={link.icon}
+                  onEdit={handleEditLink}
+                  onDelete={handleDeleteLink}
+                  moveLink={moveLink}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Preview Panel - Now on the right side */}
+      <div className="preview-panel w-full lg:w-3/5 bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 self-start print:static print:shadow-none print:bg-white print:p-0 print:break-inside-avoid print:w-full print:mx-auto print:max-w-[210mm]">
+        {/* Dynamic Preview Label */}
+        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+          {previewMode === 'mobile' ? 'Mobile Preview' : 'Desktop Preview'}
+        </div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-manrope font-semibold text-cyan-400 print:text-2xl print:text-center print:mb-6 flex items-center">
+          <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+            <FontAwesomeIcon icon={previewMode === 'mobile' ? faMobile : faDesktop} />
+          </span>
+          Live Preview
+        </h2>
+        <div className="flex bg-gray-700 rounded-lg p-1 shadow-inner print:hidden">
+          <button
+            onClick={() => setPreviewMode('mobile')}
+            className={`p-2 rounded-md text-sm ${previewMode === 'mobile' ? 'bg-gray-600 shadow-sm font-medium text-cyan-400' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Mobile Preview"
+          >
+            <FontAwesomeIcon icon={faMobile} />
+          </button>
+          <button
+            onClick={() => setPreviewMode('desktop')}
+            className={`p-2 rounded-md text-sm ${previewMode === 'desktop' ? 'bg-gray-600 shadow-sm font-medium text-cyan-400' : 'text-gray-400 hover:text-gray-200'}`}
+            title="Desktop Preview"
+          >
+            <FontAwesomeIcon icon={faDesktop} />
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="p-2 rounded-md text-sm text-gray-400 hover:bg-gray-600 hover:shadow-sm hover:text-gray-200"
+            title="Print Preview"
+          >
+            <FontAwesomeIcon icon={faPrint} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-800 rounded-t-xl p-3 flex justify-center items-center print:hidden">
+        <div className={previewMode === 'mobile' ? 'w-16 h-1 bg-gray-500 rounded-full' : 'hidden'} />
+      </div>
+
+      {/* Preview Container with improved styling */}
+      <div className="preview-container bg-gray-700 border border-gray-600 rounded-b-xl overflow-hidden shadow-inner">
+        <div className="p-4 flex justify-center">
+          <div
+            className="aspect-[9/16] w-[320px] border-4 border-gray-800 rounded-3xl overflow-hidden shadow-2xl bg-white relative"
+            style={{
+              backgroundColor: colors.background,
+              backgroundImage: background ? `url(${background})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              color: colors.text,
+            }}
+          >
+            {/* Device frame for mobile preview */}
+            <div className="absolute inset-0 pointer-events-none border-8 border-gray-800 rounded-3xl z-10">
+              {/* Phone notch */}
+              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-16 h-5 bg-black rounded-b-xl"></div>
+            </div>
+
+            <div className="p-6 flex flex-col h-full">
+              <h1 className="text-2xl font-bold text-center mb-6" style={{ color: colors.text }}>
+                {title || "My NFC Card"}
+              </h1>
+
+              <div className="space-y-4 flex-grow">
+                {links.length > 0 ? (
+                  links.map((link) => (
+                    <button
+                      key={link.id}
+                      className="w-full text-center py-2.5 px-4 rounded-full text-sm font-medium flex items-center justify-center gap-2 border-2 mx-auto"
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: '#1f2937',
+                        borderColor: colors.button
+                      }}
+                    >
+                      <span>{link.title}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-4 opacity-70" style={{ color: colors.text }}>
+                    <p>No links added yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  {/* Modern Sticky Footer with Action Buttons - Mobile Optimized */}
+  <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700 py-3 px-4 sm:py-4 sm:px-6 z-10 print:hidden">
+    <div className="max-w-7xl mx-auto relative">
+      {/* Step indicator - Mobile friendly version */}
+      <div className="flex justify-center mb-3 sm:hidden">
+        <div className="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-full">
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold text-xs">
+            {currentStep}
+          </div>
+          <span className="text-xs font-medium text-white">
+            {currentStep === 1 ? 'Basic Details' : currentStep === 2 ? 'Appearance' : 'Links'}
+          </span>
+        </div>
+      </div>
+
+      {/* Desktop step indicator and buttons */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+        {/* Step indicator - Desktop only */}
+        <div className="hidden sm:flex items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold text-sm shadow-lg shadow-cyan-500/20">
+              {currentStep}/3
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-400">Current Step</span>
+              <span className="text-sm font-medium text-white">
+                {currentStep === 1 ? 'Basic Details' : currentStep === 2 ? 'Appearance' : 'Links'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Buttons - Optimized for mobile and desktop */}
+        <div className="flex w-full sm:w-auto gap-2 sm:gap-3">
+          {/* Previous button - Only show on step 2 and 3 */}
+          {currentStep > 1 && (
+            <button
+              onClick={goToPrevStep}
+              className="flex-1 sm:flex-none border border-cyan-800 bg-cyan-900/30 text-cyan-300 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:bg-cyan-800/50 transition-all text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-cyan-700 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+            >
+              <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="hidden sm:inline">Previous</span>
+            </button>
+          )}
+
+          {/* Next/Save button */}
+          {currentStep < 3 ? (
+            <button
+              onClick={handleNextStep}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-purple-500 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:from-cyan-600 hover:to-purple-600 transition-all text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+            >
+              <span>Next</span>
+              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              className="flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+            >
+              <FontAwesomeIcon icon={faSave} className="mr-1.5" />
+              <span>Save Card</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Discard button - Moved to bottom on mobile for less accidental clicks */}
+      <div className="mt-2 sm:hidden">
+        <button
+          onClick={() => window.location.reload()}
+          className="w-full border border-gray-700 text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-800 hover:text-white transition-all text-xs font-medium flex items-center justify-center gap-2 focus:outline-none min-h-[40px]"
+        >
+          <FontAwesomeIcon icon={faTimes} />
+          Discard Changes
+        </button>
+      </div>
+
+      {/* Desktop discard button */}
+      <div className="hidden sm:flex sm:justify-start sm:mt-4">
+        <button
+          onClick={() => window.location.reload()}
+          className="border border-gray-700 text-gray-300 py-2.5 px-5 rounded-lg hover:bg-gray-800 hover:text-white transition-all text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-900"
+        >
+          <FontAwesomeIcon icon={faTimes} />
+          Discard Changes
+        </button>
+      </div>
+    </div>
+  </div>
+        {/* CSS Styles */}
+        <style>{`
+          @keyframes fadeInDown {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          .animate-fade-in-down {
+            animation: fadeInDown 0.3s ease-out forwards;
+          }
+
+          @media print {
+            @page {
+              size: portrait;
+              margin: 0.5cm;
+            }
+            body {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            .print-hide {
+              display: none !important;
+            }
+            .print-break-inside-avoid {
+              break-inside: avoid;
+            }
+            .print-break-after {
+              break-after: page;
+            }
+            /* CMYK color optimization hints */
+            .print-optimize-colors {
+              filter: brightness(0.95) contrast(1.05);
+            }
+          }
+
+          @media (min-width: 1024px) {
+            .form-panel {
+              min-width: 400px;
+            }
+          }
+
+          /* Cyberpunk-inspired scrollbar */
+          ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+
+          ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.1);
+            border-radius: 4px;
+          }
+
+          ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+          }
+
+          ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #2563eb, #7c3aed);
+          }
+
+          /* Mobile responsiveness */
+          @media (max-width: 768px) {
+            .preview-panel {
+              position: fixed;
+              bottom: 80px;
+              right: 20px;
+              width: 60px;
+              height: 60px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: linear-gradient(to right, #3b82f6, #8b5cf6);
+              color: white;
+              box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
+              z-index: 40;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            }
+
+            .preview-panel:hover {
+              transform: scale(1.1);
+            }
+
+            .preview-panel.expanded {
+              width: 90%;
+              height: 70%;
+              border-radius: 16px;
+              bottom: 100px;
+              right: 5%;
+              background: white;
+              color: inherit;
+            }
+          }
+        `}</style>
+
+        {/* Editor Panel - Left side */}
+        <div className="form-panel w-full lg:w-2/5 space-y-4 print:hidden">
+          {/* Step Content - Only show the current step */}
+          {/* Card Details Section - Step 1 */}
+          <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 transition-all duration-300 ${currentStep === 1 ? 'opacity-100' : 'hidden'}`}>
+            <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+              <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+                <FontAwesomeIcon icon={faInfoCircle} />
+              </span>
+              Card Details
+            </h2>
+
+            <div className="mb-6">
+              <label htmlFor="cardTitle" className="block text-sm font-medium text-gray-300 mb-2">
+                Card Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="cardTitle"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., John's Digital Business Card"
+                className={`w-full px-4 py-3 bg-gray-700 border ${titleError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-600'} rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all shadow-sm text-sm text-white`}
+              />
+              {titleError && <p className="mt-1 text-sm text-red-500">{titleError}</p>}
+            </div>
+
+            <div className="text-xs text-gray-400 bg-gray-700 p-3 rounded-lg border border-gray-600">
+              <p className="flex items-center">
+                <FontAwesomeIcon icon={faInfoCircle} className="mr-2 text-cyan-400" />
+                This title will appear at the top of your digital card
+              </p>
+            </div>
+          </div>
+
+          {/* Appearance Section - Step 2 */}
+          <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 mt-4 transition-all duration-300 ${currentStep === 2 ? 'opacity-100' : 'hidden'}`}>
+            <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+              <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+                <FontAwesomeIcon icon={faUpload} />
+              </span>
+              Appearance
+            </h2>
+
+            {/* Background Selector Section - Enhanced */}
+            <section aria-labelledby="background-heading" className="mb-6">
+              <h3 className="text-sm font-medium text-gray-300 mb-3">Background Image</h3>
+              <div className="preset-grid grid grid-cols-3 gap-3 mb-4">
+                {/* Preset thumbnails would be rendered by BackgroundSelector */}
+              </div>
+              <div className="upload-btn bg-gray-700 p-5 border-2 border-dashed border-gray-600 rounded-lg text-center cursor-pointer hover:border-cyan-500 transition-colors relative">
+                <BackgroundSelector
+                  background={background}
+                  onSelect={setBackground}
+                  onUpload={handleBackgroundUpload}
+                />
+
+                {/* Upload Progress Indicator */}
+                {isUploading && (
+                  <div className="absolute inset-0 bg-gray-800 bg-opacity-80 flex flex-col items-center justify-center">
+                    <div className="w-full max-w-xs bg-gray-600 rounded-full h-2.5 mb-2">
+                      <div
+                        className="bg-cyan-500 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-300 font-medium">Uploading... {uploadProgress}%</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Color Picker Section */}
+            <section aria-labelledby="colors-heading">
+              <ColorPicker colors={colors} onChange={setColors} />
+            </section>
+          </div>
+
+          {/* Links Section - Step 3 */}
+          <div className={`bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 mt-4 transition-all duration-300 ${currentStep === 3 ? 'opacity-100' : 'hidden'}`}>
+            <h2 className="text-lg font-manrope font-semibold mb-4 text-cyan-400 flex items-center">
+              <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+                <FontAwesomeIcon icon={faLink} />
+              </span>
+              NFC Links
+            </h2>
+
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center">
+                <p className="text-sm text-gray-300">Add links to your digital card</p>
+                <button className="ml-2 text-cyan-400 hover:text-cyan-300" title="Learn more about supported formats">
+                  <FontAwesomeIcon icon={faInfoCircle} />
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setNewLink({ title: '', url: '', icon: 'link' });
+                  setEditingLinkId(null); // Ensure we are adding, not updating
+                }}
+                className="bg-cyan-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all transform hover:scale-105 text-sm font-medium flex items-center gap-1"
+                title="Add New Link"
+              >
+                <FontAwesomeIcon icon={faPlus} />
+                <span>Add New</span>
+              </button>
+            </div>
+
+            {/* Link Form - Improved Layout & Placeholders */}
+            <form onSubmit={handleAddLink} className="mb-6 bg-gray-700 p-5 rounded-lg border border-gray-600 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <div className="relative">
+                  <label htmlFor="linkTitle" className="block text-sm font-medium text-gray-300 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    id="linkTitle"
+                    value={newLink.title}
+                    onChange={(e) =>
+                      setNewLink({ ...newLink, title: e.target.value })
+                    }
+                    placeholder="e.g., My Website"
+                    className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm shadow-sm text-white"
+                    required
+                  />
+                </div>
+                <div className="relative">
+                  <label htmlFor="linkUrl" className="block text-sm font-medium text-gray-300 mb-1">
+                    URL
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      id="linkUrl"
+                      value={newLink.url}
+                      onChange={(e) =>
+                        setNewLink({ ...newLink, url: e.target.value })
+                      }
+                      placeholder="https://example.com"
+                      className="w-full px-4 py-3 bg-gray-600 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm shadow-sm text-white"
+                      required
+                      pattern="https?://.+"
+                    />
+                    {/* Visual validation indicator */}
+                    {newLink.url && newLink.url.match(/^https?:\/\/.+$/) && (
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <FontAwesomeIcon icon={faCheck} className="text-green-500" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="md:col-span-1">
+                  <label htmlFor="linkIcon" className="block text-sm font-medium text-gray-300 mb-1">
+                    Icon
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="linkIcon"
+                      value={newLink.icon}
+                      onChange={(e) =>
+                        setNewLink({ ...newLink, icon: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-500 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm bg-gray-600 text-white appearance-none shadow-sm"
+                    >
+                      <option value="link">Link</option>
+                      <option value="facebook">Facebook</option>
+                      <option value="twitter">Twitter</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="github">GitHub</option>
+                      <option value="youtube">YouTube</option>
+                      <option value="email">Email</option>
+                      <option value="phone">Phone</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-300">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:col-span-1 flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full bg-cyan-600 text-white py-3 px-4 rounded-lg hover:bg-cyan-700 transition-all transform hover:scale-105 text-sm font-medium flex items-center justify-center gap-2 shadow-md"
+                  >
+                    <FontAwesomeIcon icon={editingLinkId ? faPen : faPlus} />
+                    {editingLinkId ? 'Update Link' : 'Add Link'}
+                  </button>
+                  {editingLinkId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingLinkId(null);
+                        setNewLink({ title: '', url: '', icon: 'link' });
+                      }}
+                      className="ml-2 text-gray-400 hover:text-gray-200 p-2 rounded-md hover:bg-gray-600"
+                      title="Cancel Edit"
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
+
+            {/* Links List - Improved Styling */}
+            <div ref={drop} className="min-h-[200px] border-2 border-dashed border-gray-600 p-6 rounded-lg bg-gray-700 transition-all hover:border-cyan-500 hover:bg-cyan-900/30 shadow-inner group">
+              <div className="space-y-3">
+                {links.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[180px] text-gray-400 group-hover:scale-105 transition-transform duration-300">
+                    <div className="relative mb-4">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full blur-md opacity-30 group-hover:opacity-70 animate-pulse transition-opacity duration-300"></div>
+                      <div className="relative bg-gray-800 p-4 rounded-full">
+                        <FontAwesomeIcon icon={faLink} className="text-4xl text-cyan-400" />
+                      </div>
+                    </div>
+                    <p className="text-base font-medium text-center mb-2 text-gray-300">Add NFC Links (+)</p>
+                    <p className="text-sm text-gray-400 max-w-xs text-center">Drag & drop links here or use the form above</p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="px-3 py-1 bg-blue-900/50 text-blue-400 rounded-full shadow-sm border border-blue-800">Social Media</span>
+                        <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full shadow-sm border border-green-800">Websites</span>
+                        <span className="px-3 py-1 bg-purple-900/50 text-purple-400 rounded-full shadow-sm border border-purple-800">Contact Info</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  links.map((link, index) => (
+                    <LinkItem
+                      key={link.id}
+                      id={link.id}
+                      index={index}
+                      title={link.title}
+                      url={link.url}
+                      icon={link.icon}
+                      onEdit={handleEditLink}
+                      onDelete={handleDeleteLink}
+                      moveLink={moveLink}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Preview Panel - Right side */}
+        <div className="preview-panel w-full lg:w-3/5 bg-gray-800 p-4 rounded-xl shadow-md border border-gray-700 self-start print:static print:shadow-none print:bg-white print:p-0 print:break-inside-avoid print:w-full print:mx-auto print:max-w-[210mm]">
+          {/* Dynamic Preview Label */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+            {previewMode === 'mobile' ? 'Mobile Preview' : 'Desktop Preview'}
+          </div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-manrope font-semibold text-cyan-400 print:text-2xl print:text-center print:mb-6 flex items-center">
+              <span className="bg-gray-700 text-cyan-400 p-2 rounded-lg mr-3">
+                <FontAwesomeIcon icon={previewMode === 'mobile' ? faMobile : faDesktop} />
+              </span>
+              Live Preview
+            </h2>
+            <div className="flex bg-gray-700 rounded-lg p-1 shadow-inner print:hidden">
+              <button
+                onClick={() => setPreviewMode('mobile')}
+                className={`p-2 rounded-md text-sm ${previewMode === 'mobile' ? 'bg-gray-600 shadow-sm font-medium text-cyan-400' : 'text-gray-400 hover:text-gray-200'}`}
+                title="Mobile Preview"
+              >
+                <FontAwesomeIcon icon={faMobile} />
+              </button>
+              <button
+                onClick={() => setPreviewMode('desktop')}
+                className={`p-2 rounded-md text-sm ${previewMode === 'desktop' ? 'bg-gray-600 shadow-sm font-medium text-cyan-400' : 'text-gray-400 hover:text-gray-200'}`}
+                title="Desktop Preview"
+              >
+                <FontAwesomeIcon icon={faDesktop} />
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="p-2 rounded-md text-sm text-gray-400 hover:bg-gray-600 hover:shadow-sm hover:text-gray-200"
+                title="Print Preview"
+              >
+                <FontAwesomeIcon icon={faPrint} />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-gray-800 rounded-t-xl p-3 flex justify-center items-center print:hidden">
+            <div className={previewMode === 'mobile' ? 'w-16 h-1 bg-gray-500 rounded-full' : 'hidden'} />
+          </div>
+
+          {/* Preview Container with improved styling */}
+          <div className="preview-container bg-gray-700 border border-gray-600 rounded-b-xl overflow-hidden shadow-inner">
+            <div className="p-4 flex justify-center">
+              <div
+                className="aspect-[9/16] w-[320px] border-4 border-gray-800 rounded-3xl overflow-hidden shadow-2xl bg-white relative"
+                style={{
+                  backgroundColor: colors.background,
+                  backgroundImage: background ? `url(${background})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  color: colors.text,
+                }}
+              >
+                {/* Device frame for mobile preview */}
+                <div className="absolute inset-0 pointer-events-none border-8 border-gray-800 rounded-3xl z-10">
+                  {/* Phone notch */}
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-16 h-5 bg-black rounded-b-xl"></div>
+                </div>
+
+                <div className="p-6 flex flex-col h-full">
+                  <h1 className="text-2xl font-bold text-center mb-6" style={{ color: colors.text }}>
+                    {title || "My NFC Card"}
+                  </h1>
+
+                  <div className="space-y-4 flex-grow">
+                    {links.length > 0 ? (
+                      links.map((link) => (
+                        <button
+                          key={link.id}
+                          className="w-full text-center py-2.5 px-4 rounded-full text-sm font-medium flex items-center justify-center gap-2 border-2 mx-auto"
+                          style={{
+                            backgroundColor: 'transparent',
+                            color: '#1f2937',
+                            borderColor: colors.button
+                          }}
+                        >
+                          <span>{link.title}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 opacity-70" style={{ color: colors.text }}>
+                        <p>No links added yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modern Sticky Footer with Action Buttons - Mobile Optimized */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-md border-t border-gray-700 py-3 px-4 sm:py-4 sm:px-6 z-10 print:hidden">
+        <div className="max-w-7xl mx-auto relative">
+          {/* Step indicator - Mobile friendly version */}
+          <div className="flex justify-center mb-3 sm:hidden">
+            <div className="flex items-center gap-2 bg-gray-800/80 px-3 py-1.5 rounded-full">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold text-xs">
+                {currentStep}
+              </div>
+              <span className="text-xs font-medium text-white">
+                {currentStep === 1 ? 'Basic Details' : currentStep === 2 ? 'Appearance' : 'Links'}
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop step indicator and buttons */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+            {/* Step indicator - Desktop only */}
+            <div className="hidden sm:flex items-center">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-bold text-sm shadow-lg shadow-cyan-500/20">
+                  {currentStep}/3
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-400">Current Step</span>
+                  <span className="text-sm font-medium text-white">
+                    {currentStep === 1 ? 'Basic Details' : currentStep === 2 ? 'Appearance' : 'Links'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Buttons - Optimized for mobile and desktop */}
+            <div className="flex w-full sm:w-auto gap-2 sm:gap-3">
+              {/* Previous button - Only show on step 2 and 3 */}
+              {currentStep > 1 && (
+                <button
+                  onClick={goToPrevStep}
+                  className="flex-1 sm:flex-none border border-cyan-800 bg-cyan-900/30 text-cyan-300 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:bg-cyan-800/50 transition-all text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-cyan-700 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+                >
+                  <svg className="w-4 h-4 sm:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+              )}
+
+              {/* Next/Save button */}
+              {currentStep < 3 ? (
+                <button
+                  onClick={handleNextStep}
+                  className="flex-1 sm:flex-none bg-gradient-to-r from-cyan-500 to-purple-500 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:from-cyan-600 hover:to-purple-600 transition-all text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+                >
+                  <span>Next</span>
+                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  className="flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 min-h-[44px]"
+                >
+                  <FontAwesomeIcon icon={faSave} className="mr-1.5" />
+                  <span>Save Card</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Discard button - Moved to bottom on mobile for less accidental clicks */}
+          <div className="mt-2 sm:hidden">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full border border-gray-700 text-gray-300 py-2 px-4 rounded-lg hover:bg-gray-800 hover:text-white transition-all text-xs font-medium flex items-center justify-center gap-2 focus:outline-none min-h-[40px]"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+              Discard Changes
+            </button>
+          </div>
+
+          {/* Desktop discard button */}
+          <div className="hidden sm:flex sm:justify-start sm:mt-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="border border-gray-700 text-gray-300 py-2.5 px-5 rounded-lg hover:bg-gray-800 hover:text-white transition-all text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2 focus:ring-offset-gray-900"
+            >
+              <FontAwesomeIcon icon={faTimes} />
+              Discard Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CardEditor;
