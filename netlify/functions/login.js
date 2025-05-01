@@ -59,6 +59,10 @@ exports.handler = async (event, context) => {
 
     // For now, let's create a mock response for testing
     console.log('Creating mock login response for testing');
+
+    // Check if this is an admin login
+    const isAdmin = data.email.includes('admin') || data.email === 'yassin@gmail.com';
+
     return {
       statusCode: 200,
       headers,
@@ -66,9 +70,9 @@ exports.handler = async (event, context) => {
         token: 'mock-token-for-testing',
         user: {
           id: 1,
-          name: 'Test User',
+          name: isAdmin ? 'Admin User' : 'Test User',
           email: data.email,
-          is_admin: false
+          is_admin: isAdmin
         },
         message: 'Mock login successful'
       })

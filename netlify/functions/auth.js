@@ -39,15 +39,21 @@ exports.handler = async (event, context) => {
     // Handle profile requests with mock data for testing
     if (segments.length > 0 && segments[0] === 'profile') {
       console.log('Creating mock profile response for testing');
+
+      // Get the authorization header to determine if this is an admin
+      const authHeader = event.headers.authorization || event.headers.Authorization;
+      // In a real app, we would verify the token, but for mock data we'll just check if it exists
+      const isAdmin = authHeader && (authHeader.includes('admin') || authHeader.includes('yassin'));
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           user: {
             id: 1,
-            name: 'Test User',
-            email: 'test@example.com',
-            is_admin: false
+            name: isAdmin ? 'Admin User' : 'Test User',
+            email: isAdmin ? 'yassin@gmail.com' : 'test@example.com',
+            is_admin: isAdmin
           },
           message: 'Mock profile successful'
         })

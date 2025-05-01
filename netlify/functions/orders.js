@@ -51,8 +51,13 @@ exports.handler = async (event, context) => {
             plan_type: 'standard',
             card_created: false,
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             shipping_address: '123 Main St, Tunis, Tunisia',
-            phone: '+216 12 345 678'
+            phone_number: '+216 12 345 678',
+            payment_method: 'cash_on_delivery',
+            UserId: 1,
+            CardId: null,
+            custom_url_name: 'my-card'
           },
           {
             id: 2,
@@ -62,9 +67,32 @@ exports.handler = async (event, context) => {
             plan_type: 'logo',
             card_created: true,
             card_id: 1,
+            CardId: 1,
+            card_title: 'My Digital Card',
+            unique_url: 'test-card',
             created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
             shipping_address: '456 Oak St, Sfax, Tunisia',
-            phone: '+216 98 765 432'
+            phone_number: '+216 98 765 432',
+            payment_method: 'cash_on_delivery',
+            UserId: 1,
+            custom_url_name: 'business-card'
+          },
+          {
+            id: 3,
+            quantity: 1,
+            total_price: 55,
+            status: 'shipped',
+            plan_type: 'full',
+            card_created: false,
+            created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            shipping_address: '789 Pine St, Sousse, Tunisia',
+            phone_number: '+216 55 123 456',
+            payment_method: 'cash_on_delivery',
+            UserId: 1,
+            CardId: null,
+            custom_url_name: 'premium-card'
           }
         ])
       };

@@ -49,11 +49,31 @@ exports.handler = async (event, context) => {
             unique_url: 'test-card',
             background: 'linear-gradient(to right, #0ea5e9, #2563eb)',
             created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             links: [
               { id: 1, title: 'Website', url: 'https://example.com', icon: 'globe' },
               { id: 2, title: 'LinkedIn', url: 'https://linkedin.com', icon: 'linkedin' }
             ],
-            colors: { primary: '#3B82F6', background: '#0F172A' }
+            colors: { primary: '#3B82F6', background: '#0F172A' },
+            profilePic: null,
+            planType: 'standard',
+            UserId: 1
+          },
+          {
+            id: 2,
+            title: 'Business Card',
+            unique_url: 'business-card',
+            background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+            created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+            links: [
+              { id: 1, title: 'Company Website', url: 'https://company.com', icon: 'building' },
+              { id: 2, title: 'Email', url: 'mailto:contact@company.com', icon: 'envelope' }
+            ],
+            colors: { primary: '#8b5cf6', background: '#18181b' },
+            profilePic: null,
+            planType: 'logo',
+            UserId: 1
           }
         ])
       };
