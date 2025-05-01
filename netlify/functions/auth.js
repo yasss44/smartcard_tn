@@ -2,7 +2,7 @@
 const axios = require('axios');
 const https = require('https');
 const jwt = require('jsonwebtoken');
-const { User, testConnection } = require('./db');
+const { testConnection, findUserById } = require('./db-simple');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -125,7 +125,7 @@ exports.handler = async (event, context) => {
           console.log('Database connected, finding user with ID:', decoded.id);
 
           // Find user by ID
-          const user = await User.findByPk(decoded.id);
+          const user = await findUserById(decoded.id);
 
           // Check if user exists
           if (!user) {

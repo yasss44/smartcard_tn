@@ -1,7 +1,7 @@
 // Netlify serverless function for login
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, testConnection } = require('./db');
+const { testConnection, findUserByEmail } = require('./db-simple');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -71,7 +71,7 @@ exports.handler = async (event, context) => {
       console.log('Database connected, attempting to find user:', data.email);
 
       // Find the user by email
-      const user = await User.findOne({ where: { email: data.email } });
+      const user = await findUserByEmail(data.email);
 
       // Check if user exists
       if (!user) {
