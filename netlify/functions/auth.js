@@ -3,10 +3,14 @@ const axios = require('axios');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
+  const origin = event.headers.origin || event.headers.Origin || '*';
+  console.log('Request origin:', origin);
+
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
   };
 
   // Handle preflight OPTIONS request
@@ -30,9 +34,9 @@ exports.handler = async (event, context) => {
     // Forward the request to the actual API
     const API_URL = 'https://smart-card.tn/api/auth';
     const url = `${API_URL}${path}`;
-    
+
     console.log('Forwarding auth request to:', url);
-    
+
     // Get the request body if it exists
     let data = null;
     if (event.body) {
@@ -42,14 +46,14 @@ exports.handler = async (event, context) => {
         console.error('Error parsing auth request body:', error);
       }
     }
-    
+
     // Get authorization header if it exists
     const authHeader = event.headers.authorization || event.headers.Authorization;
     const requestHeaders = {};
     if (authHeader) {
       requestHeaders.Authorization = authHeader;
     }
-    
+
     // Make the request to the actual API
     const response = await axios({
       method: method.toLowerCase(),
@@ -57,7 +61,7 @@ exports.handler = async (event, context) => {
       data,
       headers: requestHeaders
     });
-    
+
     // Return the response
     return {
       statusCode: response.status,
@@ -69,7 +73,7 @@ exports.handler = async (event, context) => {
     };
   } catch (error) {
     console.error('Error processing auth request:', error);
-    
+
     // Return the error response
     return {
       statusCode: error.response?.status || 500,

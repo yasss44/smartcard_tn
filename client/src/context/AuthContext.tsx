@@ -39,7 +39,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Set up axios defaults
-  const API_URL = 'https://smart-card.tn/api';
+  const isNetlify = window.location.hostname.includes('netlify.app');
+  const API_URL = isNetlify ? '/api' : 'https://smart-card.tn/api';
+
+  console.log('AuthContext using API URL:', API_URL);
 
   // Configure axios with token
   useEffect(() => {

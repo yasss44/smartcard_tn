@@ -3,10 +3,14 @@ const axios = require('axios');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
+  const origin = event.headers.origin || event.headers.Origin || '*';
+  console.log('Request origin:', origin);
+
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
   };
 
   // Handle preflight OPTIONS request
