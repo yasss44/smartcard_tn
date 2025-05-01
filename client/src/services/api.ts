@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = 'https://smart-card.tn/api'; // Production API URL
+// Determine the API URL based on the environment
+const isNetlify = window.location.hostname.includes('netlify.app');
+const API_URL = isNetlify ? '/api' : 'https://smart-card.tn/api';
+
+console.log('Using API URL:', API_URL);
 
 // Configure axios
 const api = axios.create({

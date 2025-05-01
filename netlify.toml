@@ -5,8 +5,13 @@ command = "node build.js && npm install && cd client && npm install && npm run b
 functions = "netlify/functions"
 
 [[redirects]]
+from = "/api/auth/*"
+to = "/.netlify/functions/auth/:splat"
+status = 200
+
+[[redirects]]
 from = "/api/*"
-to = "/.netlify/functions/:splat"
+to = "/.netlify/functions/api/:splat"
 status = 200
 
 [[redirects]]
