@@ -5,12 +5,16 @@ exports.handler = async (event, context) => {
   // Set CORS headers
   const origin = event.headers.origin || event.headers.Origin || '*';
   console.log('Login request from origin:', origin);
-  
+  console.log('Request path:', event.path);
+  console.log('Request method:', event.httpMethod);
+  console.log('Request headers:', JSON.stringify(event.headers));
+
   const headers = {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Credentials': 'true'
+    'Access-Control-Allow-Credentials': 'true',
+    'Content-Type': 'application/json'
   };
 
   // Handle preflight OPTIONS request
@@ -34,7 +38,7 @@ exports.handler = async (event, context) => {
 
   try {
     console.log('Processing login request');
-    
+
     // Parse request body
     let data;
     try {
@@ -45,46 +49,82 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ message: 'Invalid request body' })
+        body: JSON.stringify({
+          message: 'Invalid request body',
+          error: error.message,
+          body: event.body
+        })
       };
     }
 
-    // Forward the request to the actual API
-    console.log('Forwarding login request to smart-card.tn');
-    const response = await axios({
-      method: 'post',
-      url: 'https://smart-card.tn/api/auth/login',
-      data,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    console.log('Login successful');
-    
-    // Return the response
+    // Create a mock response for testing
+    console.log('Creating mock response for testing');
     return {
       statusCode: 200,
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(response.data)
+      headers,
+      body: JSON.stringify({
+        token: 'mock-token-for-testing',
+        user: {
+          id: 1,
+          name: 'Test User',
+          email: data.email,
+          is_admin: false
+        },
+        message: 'Mock login successful'
+      })
     };
+
+    // Uncomment this section when ready to forward to the real API
+    /*
+    // Forward the request to the actual API
+    console.log('Forwarding login request to smart-card.tn');
+    try {
+      const response = await axios({
+        method: 'post',
+        url: 'https://smart-card.tn/api/auth/login',
+        data,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      });
+
+      console.log('Login successful');
+
+      // Return the response
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(response.data)
+      };
+    } catch (apiError) {
+      console.error('API request error:', apiError.message);
+      console.error('API response status:', apiError.response?.status);
+      console.error('API response data:', JSON.stringify(apiError.response?.data));
+
+      return {
+        statusCode: apiError.response?.status || 500,
+        headers,
+        body: JSON.stringify({
+          message: apiError.response?.data?.message || 'Login failed',
+          error: apiError.message,
+          details: apiError.response?.data
+        })
+      };
+    }
+    */
   } catch (error) {
-    console.error('Login error:', error.message);
-    console.error('Error details:', error.response?.data);
-    
+    console.error('Login function error:', error.message);
+    console.error('Error stack:', error.stack);
+
     // Return the error response
     return {
-      statusCode: error.response?.status || 500,
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json'
-      },
+      statusCode: 500,
+      headers,
       body: JSON.stringify({
-        message: error.response?.data?.message || 'Login failed',
-        error: error.message
+        message: 'Internal server error in login function',
+        error: error.message,
+        stack: error.stack
       })
     };
   }
