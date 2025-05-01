@@ -2,7 +2,7 @@
   # Directory to publish (the build output)
   publish = "client/dist"
   # Build command
-  command = "npm run build"
+  command = "npm install && cd client && npm install && npm run build"
   # Directory with the functions code
   functions = "netlify/functions"
 
