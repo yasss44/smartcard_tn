@@ -1,19 +1,14 @@
 [build]
-  # Directory to publish (the build output)
-  publish = "client/dist"
-  # Build command
-  command = "npm install && cd client && npm install && npm run build"
-  # Directory with the functions code
-  functions = "netlify/functions"
+publish = "client/dist"
+command = "npm install && cd client && npm install && npm run build"
+functions = "netlify/functions"
 
-# Redirects and rewrites
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+from = "/api/*"
+to = "/.netlify/functions/:splat"
+status = 200
 
-# SPA redirect - send all routes to index.html
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+from = "/*"
+to = "/index.html"
+status = 200

@@ -1,4 +1,4 @@
-// Simple Netlify serverless function
+// Simple Netlify serverless function for index route
 exports.handler = async (event, context) => {
   return {
     statusCode: 200,
