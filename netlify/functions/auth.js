@@ -163,6 +163,104 @@ exports.handler = async (event, context) => {
             })
           };
         }
+      } else if (segments.length > 0 && segments[0] === 'login' && method === 'POST') {
+        console.log('Handling login request directly with database');
+
+        try {
+          // Validate required fields
+          if (!data.email || !data.password) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                message: 'Email and password are required'
+              })
+            };
+          }
+
+          // Test database connection
+          const isConnected = await testConnection();
+          if (!isConnected) {
+            throw new Error('Database connection failed');
+          }
+
+          console.log('Database connected, attempting to find user:', data.email);
+
+          // Find the user by email
+          const { pool } = require('./db-simple');
+          const [users] = await pool.execute(
+            'SELECT * FROM Users WHERE email = ?',
+            [data.email]
+          );
+
+          // Check if user exists
+          if (users.length === 0) {
+            console.log('User not found:', data.email);
+            return {
+              statusCode: 401,
+              headers,
+              body: JSON.stringify({
+                message: 'Invalid credentials'
+              })
+            };
+          }
+
+          const user = users[0];
+          console.log('User found, checking password');
+
+          // Check if password is correct
+          const isMatch = await bcrypt.compare(data.password, user.password);
+          if (!isMatch) {
+            console.log('Password does not match');
+            return {
+              statusCode: 401,
+              headers,
+              body: JSON.stringify({
+                message: 'Invalid credentials'
+              })
+            };
+          }
+
+          console.log('Password matches, generating token');
+
+          // Generate JWT token
+          const token = jwt.sign(
+            { id: user.id },
+            'nfc_business_card_secret_key', // JWT secret
+            { expiresIn: '7d' }
+          );
+
+          console.log('Login successful for user:', user.email);
+
+          // Return the response
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              token,
+              user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                is_admin: user.is_admin
+              },
+              message: 'Login successful'
+            })
+          };
+        } catch (loginError) {
+          console.error('Login request error:', loginError.message);
+          console.error('Login error stack:', loginError.stack);
+
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+              message: 'Login failed',
+              error: loginError.message,
+              stack: loginError.stack
+            })
+          };
+        }
       } else if (segments.length > 0 && segments[0] === 'register' && method === 'POST') {
         console.log('Handling register request directly with database');
 
