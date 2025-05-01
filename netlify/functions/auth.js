@@ -36,76 +36,8 @@ exports.handler = async (event, context) => {
   console.log('Auth HTTP method:', method);
 
   try {
-    // Handle profile requests with mock data for testing
-    if (segments.length > 0 && segments[0] === 'profile') {
-      console.log('Creating mock profile response for testing');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          user: {
-            id: 1,
-            name: 'Test User',
-            email: 'test@example.com',
-            is_admin: false
-          },
-          message: 'Mock profile successful'
-        })
-      };
-    }
-
-    // Handle register requests with mock data for testing
-    if (segments.length > 0 && segments[0] === 'register') {
-      // Parse request body
-      let data;
-      try {
-        data = JSON.parse(event.body);
-        console.log('Register request data:', { name: data.name, email: data.email, password: '***' });
-      } catch (error) {
-        console.error('Error parsing register request body:', error);
-        return {
-          statusCode: 400,
-          headers,
-          body: JSON.stringify({
-            message: 'Invalid request body',
-            error: error.message,
-            body: event.body
-          })
-        };
-      }
-
-      console.log('Creating mock register response for testing');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          token: 'mock-token-for-testing',
-          user: {
-            id: 1,
-            name: data.name,
-            email: data.email,
-            is_admin: false
-          },
-          message: 'Mock registration successful'
-        })
-      };
-    }
-
-    // For other auth endpoints, return a mock response
-    console.log('Creating mock auth response for testing');
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        message: 'Mock auth endpoint response',
-        path: path,
-        method: method
-      })
-    };
-
-    // Uncomment this section when ready to forward to the real API
-    /*
     // Forward the request to the actual API
+    console.log('Forwarding auth request to smart-card.tn');
     const API_URL = 'https://smart-card.tn/api/auth';
     const url = `${API_URL}${path}`;
 
@@ -173,7 +105,6 @@ exports.handler = async (event, context) => {
         })
       };
     }
-    */
   } catch (error) {
     console.error('Auth function error:', error.message);
     console.error('Error stack:', error.stack);

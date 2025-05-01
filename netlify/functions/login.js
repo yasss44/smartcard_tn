@@ -57,25 +57,6 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Create a mock response for testing
-    console.log('Creating mock response for testing');
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        token: 'mock-token-for-testing',
-        user: {
-          id: 1,
-          name: 'Test User',
-          email: data.email,
-          is_admin: false
-        },
-        message: 'Mock login successful'
-      })
-    };
-
-    // Uncomment this section when ready to forward to the real API
-    /*
     // Forward the request to the actual API
     console.log('Forwarding login request to smart-card.tn');
     try {
@@ -112,7 +93,6 @@ exports.handler = async (event, context) => {
         })
       };
     }
-    */
   } catch (error) {
     console.error('Login function error:', error.message);
     console.error('Error stack:', error.stack);
