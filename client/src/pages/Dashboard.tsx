@@ -49,11 +49,11 @@ const Dashboard = () => {
 
         // Fetch cards
         const cardsData = await cardAPI.getUserCards();
-        setCards(cardsData);
+        setCards(Array.isArray(cardsData) ? cardsData : []);
 
         // Fetch orders
         const ordersData = await orderAPI.getUserOrders();
-        setOrders(ordersData);
+        setOrders(Array.isArray(ordersData) ? ordersData : []);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch data');
       } finally {
@@ -162,15 +162,15 @@ const Dashboard = () => {
                     <p className="text-gray-300 mb-6 text-lg">You haven't created any cards yet.</p>
 
                     {/* Different messages based on order status */}
-                    {orders.some(order => order.status === 'delivered' && !order.card_created) ? (
+                    {Array.isArray(orders) && orders.some(order => order.status === 'delivered' && !order.card_created) ? (
                       <p className="text-gray-400 mb-6">
                         Your order has been delivered! You can now create your digital card.
                       </p>
-                    ) : orders.some(order => order.status === 'shipped') ? (
+                    ) : Array.isArray(orders) && orders.some(order => order.status === 'shipped') ? (
                       <p className="text-gray-400 mb-6">
                         Your order has been shipped! Once delivered, you'll be able to create your first card.
                       </p>
-                    ) : orders.some(order => order.status === 'pending') ? (
+                    ) : Array.isArray(orders) && orders.some(order => order.status === 'pending') ? (
                       <p className="text-gray-400 mb-6">
                         Your order is being processed. Once approved and delivered, you'll be able to create your card.
                       </p>
@@ -180,7 +180,7 @@ const Dashboard = () => {
                       </p>
                     )}
 
-                    {orders.some(order => order.status === 'delivered' && !order.card_created) ? (
+                    {Array.isArray(orders) && orders.some(order => order.status === 'delivered' && !order.card_created) ? (
                       <Link
                         to={`/editor?order=${orders.find(order => order.status === 'delivered' && !order.card_created)?.id}&plan=${orders.find(order => order.status === 'delivered' && !order.card_created)?.plan_type}`}
                         className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 px-6 rounded-md hover:from-cyan-600 hover:to-blue-600 transition-all duration-200 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/20"
