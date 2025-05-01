@@ -1,5 +1,7 @@
 // Netlify serverless function for login
-const got = require('got');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { User, testConnection } = require('./db');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -56,38 +58,73 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Forward the request to the actual API using got
-    console.log('Forwarding login request to smart-card.tn');
+    // Connect to the database and authenticate the user
+    console.log('Authenticating user directly with database');
 
     try {
-      console.log('Attempting got request to:', 'https://smart-card.tn/api/auth/login');
-      console.log('With data:', { email: data.email, password: '***' });
+      // Test database connection
+      const isConnected = await testConnection();
+      if (!isConnected) {
+        throw new Error('Database connection failed');
+      }
 
-      const response = await got.post('https://smart-card.tn/api/auth/login', {
-        json: data,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Origin': 'https://smartcardbeta.netlify.app',
-          'User-Agent': 'Netlify Function'
-        },
-        https: {
-          rejectUnauthorized: false // Bypass SSL certificate verification
-        },
-        timeout: {
-          request: 30000 // 30 second timeout
-        },
-        responseType: 'json'
-      });
+      console.log('Database connected, attempting to find user:', data.email);
 
-      console.log('Login successful, response status:', response.statusCode);
-      console.log('Response body:', JSON.stringify(response.body));
+      // Find the user by email
+      const user = await User.findOne({ where: { email: data.email } });
+
+      // Check if user exists
+      if (!user) {
+        console.log('User not found:', data.email);
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({
+            message: 'Invalid credentials'
+          })
+        };
+      }
+
+      console.log('User found, checking password');
+
+      // Check if password is correct
+      const isMatch = await bcrypt.compare(data.password, user.password);
+      if (!isMatch) {
+        console.log('Password does not match');
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({
+            message: 'Invalid credentials'
+          })
+        };
+      }
+
+      console.log('Password matches, generating token');
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id },
+        'nfc_business_card_secret_key', // JWT secret
+        { expiresIn: '7d' }
+      );
+
+      console.log('Login successful for user:', user.email);
 
       // Return the response
       return {
-        statusCode: response.statusCode,
+        statusCode: 200,
         headers,
-        body: JSON.stringify(response.body)
+        body: JSON.stringify({
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            is_admin: user.is_admin
+          },
+          message: 'Login successful'
+        })
       };
     } catch (apiError) {
       console.error('API request error:', apiError.message);

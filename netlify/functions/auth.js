@@ -1,7 +1,8 @@
 // Netlify serverless function for authentication
 const axios = require('axios');
 const https = require('https');
-const got = require('got');
+const jwt = require('jsonwebtoken');
+const { User, testConnection } = require('./db');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -78,56 +79,84 @@ exports.handler = async (event, context) => {
     try {
       // Special handling for profile endpoint
       if (segments.length > 0 && segments[0] === 'profile') {
-        console.log('Using got for profile request');
+        console.log('Getting user profile directly from database');
 
         try {
-          // Prepare headers
-          const gotHeaders = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Origin': 'https://smartcardbeta.netlify.app',
-            'User-Agent': 'Netlify Function'
-          };
-
-          // Add authorization header if it exists
-          if (authHeader) {
-            gotHeaders['Authorization'] = authHeader;
+          // Check if authorization header exists
+          if (!authHeader) {
+            console.log('No authorization header provided');
+            return {
+              statusCode: 401,
+              headers,
+              body: JSON.stringify({
+                message: 'No authorization token provided'
+              })
+            };
           }
 
-          console.log('Profile request URL:', `https://smart-card.tn/api/auth${path}`);
-          console.log('Profile request headers:', JSON.stringify(gotHeaders));
+          // Extract token from authorization header
+          const token = authHeader.startsWith('Bearer ')
+            ? authHeader.slice(7)
+            : authHeader;
 
-          const response = await got(`https://smart-card.tn/api/auth${path}`, {
-            method: method.toLowerCase(),
-            headers: gotHeaders,
-            json: data || undefined,
-            https: {
-              rejectUnauthorized: false // Bypass SSL certificate verification
-            },
-            timeout: {
-              request: 30000 // 30 second timeout
-            },
-            responseType: 'json'
-          });
+          console.log('Token received, verifying...');
 
-          console.log('Profile request successful, response status:', response.statusCode);
-          console.log('Profile response body:', JSON.stringify(response.body));
+          // Verify token
+          let decoded;
+          try {
+            decoded = jwt.verify(token, 'nfc_business_card_secret_key');
+          } catch (error) {
+            console.error('Token verification failed:', error.message);
+            return {
+              statusCode: 401,
+              headers,
+              body: JSON.stringify({
+                message: 'Invalid token'
+              })
+            };
+          }
 
-          // Return the response
+          // Test database connection
+          const isConnected = await testConnection();
+          if (!isConnected) {
+            throw new Error('Database connection failed');
+          }
+
+          console.log('Database connected, finding user with ID:', decoded.id);
+
+          // Find user by ID
+          const user = await User.findByPk(decoded.id);
+
+          // Check if user exists
+          if (!user) {
+            console.log('User not found with ID:', decoded.id);
+            return {
+              statusCode: 404,
+              headers,
+              body: JSON.stringify({
+                message: 'User not found'
+              })
+            };
+          }
+
+          console.log('User found, returning profile data');
+
+          // Return user profile
           return {
-            statusCode: response.statusCode,
+            statusCode: 200,
             headers,
-            body: JSON.stringify(response.body)
+            body: JSON.stringify({
+              user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                is_admin: user.is_admin
+              }
+            })
           };
         } catch (profileError) {
-          console.error('Profile API request error:', profileError.message);
-          console.error('Profile API error stack:', profileError.stack);
-
-          // Log more details about the error
-          if (profileError.response) {
-            console.error('Profile API response status:', profileError.response.statusCode);
-            console.error('Profile API response body:', profileError.response.body);
-          }
+          console.error('Profile request error:', profileError.message);
+          console.error('Profile error stack:', profileError.stack);
 
           return {
             statusCode: 500,
