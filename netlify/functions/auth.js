@@ -1,6 +1,5 @@
 // Netlify serverless function for authentication
-const axios = require('axios');
-const https = require('https');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { testConnection, findUserById } = require('./db-simple');
 
@@ -39,12 +38,8 @@ exports.handler = async (event, context) => {
   console.log('Auth HTTP method:', method);
 
   try {
-    // Forward all auth endpoints to the real API
-    console.log('Forwarding auth request to smart-card.tn');
-    const API_URL = 'https://smart-card.tn/api/auth';
-    const url = `${API_URL}${path}`;
-
-    console.log('Forwarding auth request to:', url);
+    // Handle auth endpoints directly with database
+    console.log('Handling auth request directly with database');
 
     // Get the request body if it exists
     let data = null;
@@ -168,26 +163,107 @@ exports.handler = async (event, context) => {
             })
           };
         }
+      } else if (segments.length > 0 && segments[0] === 'register' && method === 'POST') {
+        console.log('Handling register request directly with database');
+
+        try {
+          // Validate required fields
+          if (!data.name || !data.email || !data.password) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                message: 'Name, email, and password are required'
+              })
+            };
+          }
+
+          // Test database connection
+          const isConnected = await testConnection();
+          if (!isConnected) {
+            throw new Error('Database connection failed');
+          }
+
+          // Check if user already exists
+          const { pool } = require('./db-simple');
+          const [existingUsers] = await pool.execute(
+            'SELECT * FROM Users WHERE email = ?',
+            [data.email]
+          );
+
+          if (existingUsers.length > 0) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({
+                message: 'User with this email already exists'
+              })
+            };
+          }
+
+          // Hash password
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(data.password, salt);
+
+          // Create new user
+          const [result] = await pool.execute(
+            'INSERT INTO Users (name, email, password, is_admin) VALUES (?, ?, ?, ?)',
+            [data.name, data.email, hashedPassword, false]
+          );
+
+          // Get the new user ID
+          const userId = result.insertId;
+
+          // Generate JWT token
+          const token = jwt.sign(
+            { id: userId },
+            'nfc_business_card_secret_key',
+            { expiresIn: '7d' }
+          );
+
+          console.log('User registered successfully:', data.email);
+
+          // Return success response
+          return {
+            statusCode: 201,
+            headers,
+            body: JSON.stringify({
+              token,
+              user: {
+                id: userId,
+                name: data.name,
+                email: data.email,
+                is_admin: false
+              },
+              message: 'User registered successfully'
+            })
+          };
+        } catch (registerError) {
+          console.error('Register request error:', registerError.message);
+          console.error('Register error stack:', registerError.stack);
+
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+              message: 'Registration failed',
+              error: registerError.message,
+              stack: registerError.stack
+            })
+          };
+        }
       } else {
-        // Use axios for other endpoints
-        const response = await axios({
-          method: method.toLowerCase(),
-          url,
-          data,
-          headers: requestHeaders,
-          timeout: 30000, // 30 second timeout
-          httpsAgent: new https.Agent({
-            rejectUnauthorized: false // Bypass SSL certificate verification
-          })
-        });
+        // For other endpoints, return a not implemented response
+        console.log('Endpoint not implemented:', segments.join('/'));
 
-        console.log('Auth request successful');
-
-        // Return the response
         return {
-          statusCode: response.status,
+          statusCode: 501,
           headers,
-          body: JSON.stringify(response.data)
+          body: JSON.stringify({
+            message: 'Endpoint not implemented',
+            path: path,
+            method: method
+          })
         };
       }
     } catch (apiError) {

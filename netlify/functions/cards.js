@@ -1,6 +1,6 @@
 // Netlify serverless function for cards endpoints
-const axios = require('axios');
-const https = require('https');
+const jwt = require('jsonwebtoken');
+const { testConnection } = require('./db-simple');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -37,12 +37,8 @@ exports.handler = async (event, context) => {
   console.log('Cards HTTP method:', method);
 
   try {
-    // Forward the request to the actual API
-    console.log('Forwarding cards request to smart-card.tn');
-    const API_URL = 'https://smart-card.tn/api';
-    const url = `${API_URL}/cards${path}`;
-
-    console.log('Forwarding cards request to:', url);
+    // Handle cards requests directly with database
+    console.log('Handling cards request directly with database');
 
     // Get the request body if it exists
     let data = null;
@@ -73,48 +69,127 @@ exports.handler = async (event, context) => {
       requestHeaders.Authorization = authHeader;
     }
 
-    // Make the request to the actual API
+    // Handle cards requests directly with database
     try {
-      const response = await axios({
-        method: method.toLowerCase(),
-        url,
-        data,
-        headers: requestHeaders,
-        timeout: 30000, // 30 second timeout
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: false // Bypass SSL certificate verification
-        })
-      });
-
-      console.log('Cards request successful');
-
-      // Return the response
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify(response.data)
-      };
-    } catch (apiError) {
-      console.error('API request error:', apiError.message);
-      console.error('API error code:', apiError.code);
-      console.error('API error stack:', apiError.stack);
-
-      if (apiError.response) {
-        console.error('API response status:', apiError.response.status);
-        console.error('API response headers:', JSON.stringify(apiError.response.headers));
-        console.error('API response data:', JSON.stringify(apiError.response.data));
-      } else if (apiError.request) {
-        console.error('No response received, request details:', apiError.request._currentUrl);
+      // Verify the token
+      if (!authHeader) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({
+            message: 'No authorization token provided'
+          })
+        };
       }
 
+      // Extract token from authorization header
+      const token = authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7)
+        : authHeader;
+
+      // Verify token
+      let userId;
+      try {
+        const decoded = jwt.verify(token, 'nfc_business_card_secret_key');
+        userId = decoded.id;
+      } catch (error) {
+        console.error('Token verification failed:', error.message);
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({
+            message: 'Invalid token'
+          })
+        };
+      }
+
+      // Test database connection
+      const isConnected = await testConnection();
+      if (!isConnected) {
+        throw new Error('Database connection failed');
+      }
+
+      // Get the database pool
+      const { pool } = require('./db-simple');
+
+      // Handle GET /cards - Get all cards for a user
+      if (method === 'GET' && segments.length === 0) {
+        console.log('Getting all cards for user:', userId);
+
+        const [cards] = await pool.execute(
+          'SELECT * FROM Cards WHERE UserId = ?',
+          [userId]
+        );
+
+        // Process the cards to parse JSON fields
+        const processedCards = cards.map(card => ({
+          ...card,
+          links: JSON.parse(card.links || '[]'),
+          colors: card.colors ? JSON.parse(card.colors) : null
+        }));
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(processedCards)
+        };
+      }
+
+      // Handle GET /cards/:id - Get a card by ID
+      if (method === 'GET' && segments.length === 1) {
+        const cardId = segments[0];
+        console.log(`Getting card with ID: ${cardId}`);
+
+        const [cards] = await pool.execute(
+          'SELECT * FROM Cards WHERE id = ? AND UserId = ?',
+          [cardId, userId]
+        );
+
+        if (cards.length === 0) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({
+              message: 'Card not found'
+            })
+          };
+        }
+
+        // Process the card to parse JSON fields
+        const card = {
+          ...cards[0],
+          links: JSON.parse(cards[0].links || '[]'),
+          colors: cards[0].colors ? JSON.parse(cards[0].colors) : null
+        };
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(card)
+        };
+      }
+
+      // For other endpoints, return a not implemented response
       return {
-        statusCode: apiError.response?.status || 500,
+        statusCode: 501,
         headers,
         body: JSON.stringify({
-          message: apiError.response?.data?.message || 'Cards request failed',
-          error: apiError.message,
-          code: apiError.code,
-          details: apiError.response?.data || 'No response data'
+          message: 'Endpoint not implemented',
+          path: path,
+          method: method
+        })
+      };
+    } catch (dbError) {
+      console.error('Database error:', dbError.message);
+      console.error('Database error stack:', dbError.stack);
+
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          message: 'Cards request failed',
+          error: dbError.message,
+          stack: dbError.stack
         })
       };
     }
