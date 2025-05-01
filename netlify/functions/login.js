@@ -72,7 +72,8 @@ exports.handler = async (event, context) => {
             'Accept': 'application/json',
             'Origin': 'https://smartcardbeta.netlify.app',
             'User-Agent': 'Netlify Function'
-          }
+          },
+          rejectUnauthorized: false // Bypass SSL certificate verification
         };
 
         console.log('Request options:', JSON.stringify(requestOptions));

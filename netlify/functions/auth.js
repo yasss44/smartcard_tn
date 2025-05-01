@@ -92,7 +92,8 @@ exports.handler = async (event, context) => {
                 'Accept': 'application/json',
                 'Origin': 'https://smartcardbeta.netlify.app',
                 'User-Agent': 'Netlify Function'
-              }
+              },
+              rejectUnauthorized: false // Bypass SSL certificate verification
             };
 
             // Add authorization header if it exists
@@ -181,7 +182,10 @@ exports.handler = async (event, context) => {
           url,
           data,
           headers: requestHeaders,
-          timeout: 30000 // 30 second timeout
+          timeout: 30000, // 30 second timeout
+          httpsAgent: new https.Agent({
+            rejectUnauthorized: false // Bypass SSL certificate verification
+          })
         });
 
         console.log('Auth request successful');

@@ -1,5 +1,6 @@
 // Netlify serverless function for API endpoints
 const axios = require('axios');
+const https = require('https');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -88,7 +89,10 @@ exports.handler = async (event, context) => {
         url,
         data,
         headers: requestHeaders,
-        timeout: 30000 // 30 second timeout
+        timeout: 30000, // 30 second timeout
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false // Bypass SSL certificate verification
+        })
       });
 
       console.log('API request successful');
