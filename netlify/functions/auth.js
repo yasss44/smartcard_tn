@@ -1,6 +1,6 @@
 // Netlify serverless function for authentication
 const axios = require('axios');
-const fetch = require('node-fetch');
+const https = require('https');
 
 exports.handler = async (event, context) => {
   // Set CORS headers
@@ -77,41 +77,103 @@ exports.handler = async (event, context) => {
     try {
       // Special handling for profile endpoint
       if (segments.length > 0 && segments[0] === 'profile') {
-        console.log('Using fetch for profile request');
+        console.log('Using native https for profile request');
 
-        const fetchOptions = {
-          method: method.toLowerCase(),
-          headers: {
-            ...requestHeaders,
-            'Accept': 'application/json',
-            'Origin': 'https://smartcardbeta.netlify.app'
-          },
-          timeout: 30000 // 30 second timeout
+        // Create a promise-based https request
+        const makeRequest = () => {
+          return new Promise((resolve, reject) => {
+            const requestOptions = {
+              hostname: 'smart-card.tn',
+              port: 443,
+              path: `/api/auth${path}`,
+              method: method.toLowerCase(),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Origin': 'https://smartcardbeta.netlify.app',
+                'User-Agent': 'Netlify Function'
+              }
+            };
+
+            // Add authorization header if it exists
+            if (authHeader) {
+              requestOptions.headers['Authorization'] = authHeader;
+            }
+
+            console.log('Profile request options:', JSON.stringify(requestOptions));
+
+            const req = https.request(requestOptions, (res) => {
+              console.log('Profile response status code:', res.statusCode);
+              console.log('Profile response headers:', JSON.stringify(res.headers));
+
+              let responseBody = '';
+
+              res.on('data', (chunk) => {
+                responseBody += chunk;
+              });
+
+              res.on('end', () => {
+                console.log('Profile response body length:', responseBody.length);
+                try {
+                  const parsedBody = JSON.parse(responseBody);
+                  resolve({
+                    statusCode: res.statusCode,
+                    headers: res.headers,
+                    body: parsedBody
+                  });
+                } catch (error) {
+                  console.error('Error parsing profile response body:', error);
+                  console.error('Raw profile response body:', responseBody);
+                  reject(new Error('Invalid JSON response from API'));
+                }
+              });
+            });
+
+            req.on('error', (error) => {
+              console.error('Profile request error:', error);
+              reject(error);
+            });
+
+            // Set a timeout
+            req.setTimeout(30000, () => {
+              req.abort();
+              reject(new Error('Profile request timed out'));
+            });
+
+            // Write the request body if it exists
+            if (data) {
+              const requestBody = JSON.stringify(data);
+              req.write(requestBody);
+            }
+
+            req.end();
+          });
         };
 
-        if (data) {
-          fetchOptions.body = JSON.stringify(data);
+        try {
+          const response = await makeRequest();
+          console.log('Profile request successful, response status:', response.statusCode);
+
+          // Return the response
+          return {
+            statusCode: response.statusCode,
+            headers,
+            body: JSON.stringify(response.body)
+          };
+        } catch (profileError) {
+          console.error('Profile API request error:', profileError.message);
+          console.error('Profile API error stack:', profileError.stack);
+
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({
+              message: 'Profile request failed',
+              error: profileError.message,
+              stack: profileError.stack
+            })
+          };
         }
-
-        console.log('Fetch options for profile:', { ...fetchOptions, body: fetchOptions.body ? '***' : undefined });
-
-        const response = await fetch(url, fetchOptions);
-
-        console.log('Profile response status:', response.status);
-        console.log('Profile response headers:', JSON.stringify(Object.fromEntries([...response.headers])));
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const responseData = await response.json();
-        console.log('Profile request successful, response data:', JSON.stringify(responseData));
-
-        return {
-          statusCode: response.status,
-          headers,
-          body: JSON.stringify(responseData)
-        };
       } else {
         // Use axios for other endpoints
         const response = await axios({
