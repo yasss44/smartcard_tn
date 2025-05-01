@@ -57,9 +57,29 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Forward the request to the actual API
+    // For now, let's create a mock response for testing
+    console.log('Creating mock login response for testing');
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        token: 'mock-token-for-testing',
+        user: {
+          id: 1,
+          name: 'Test User',
+          email: data.email,
+          is_admin: false
+        },
+        message: 'Mock login successful'
+      })
+    };
+
+    /* Temporarily commented out real API connection for debugging
     console.log('Forwarding login request to smart-card.tn');
     try {
+      console.log('Attempting axios request to:', 'https://smart-card.tn/api/auth/login');
+      console.log('With data:', { email: data.email, password: '***' });
+
       const response = await axios({
         method: 'post',
         url: 'https://smart-card.tn/api/auth/login',
@@ -67,10 +87,11 @@ exports.handler = async (event, context) => {
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 30000 // 30 second timeout
       });
 
-      console.log('Login successful');
+      console.log('Login successful, response status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data));
 
       // Return the response
       return {
@@ -80,8 +101,16 @@ exports.handler = async (event, context) => {
       };
     } catch (apiError) {
       console.error('API request error:', apiError.message);
-      console.error('API response status:', apiError.response?.status);
-      console.error('API response data:', JSON.stringify(apiError.response?.data));
+      console.error('API error code:', apiError.code);
+      console.error('API error stack:', apiError.stack);
+
+      if (apiError.response) {
+        console.error('API response status:', apiError.response.status);
+        console.error('API response headers:', JSON.stringify(apiError.response.headers));
+        console.error('API response data:', JSON.stringify(apiError.response.data));
+      } else if (apiError.request) {
+        console.error('No response received, request details:', apiError.request._currentUrl);
+      }
 
       return {
         statusCode: apiError.response?.status || 500,
@@ -89,10 +118,12 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({
           message: apiError.response?.data?.message || 'Login failed',
           error: apiError.message,
-          details: apiError.response?.data
+          code: apiError.code,
+          details: apiError.response?.data || 'No response data'
         })
       };
     }
+    */
   } catch (error) {
     console.error('Login function error:', error.message);
     console.error('Error stack:', error.stack);

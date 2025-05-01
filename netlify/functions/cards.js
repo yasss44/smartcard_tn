@@ -36,21 +36,59 @@ exports.handler = async (event, context) => {
   console.log('Cards HTTP method:', method);
 
   try {
-    // Forward the request to the actual API
-    console.log('Forwarding cards request to smart-card.tn');
-    const API_URL = 'https://smart-card.tn/api';
-    const url = `${API_URL}/cards${path}`;
+    // Handle GET /cards - Get all cards for a user
+    if (method === 'GET' && segments.length === 0) {
+      console.log('Creating mock cards response for testing');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify([
+          {
+            id: 1,
+            title: 'My Digital Card',
+            unique_url: 'test-card',
+            background: 'linear-gradient(to right, #0ea5e9, #2563eb)',
+            created_at: new Date().toISOString(),
+            links: [
+              { id: 1, title: 'Website', url: 'https://example.com', icon: 'globe' },
+              { id: 2, title: 'LinkedIn', url: 'https://linkedin.com', icon: 'linkedin' }
+            ],
+            colors: { primary: '#3B82F6', background: '#0F172A' }
+          }
+        ])
+      };
+    }
 
-    console.log('Forwarding cards request to:', url);
+    // Handle GET /cards/:id - Get a card by ID
+    if (method === 'GET' && segments.length === 1) {
+      const cardId = segments[0];
+      console.log(`Creating mock card response for ID: ${cardId}`);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          id: parseInt(cardId),
+          title: 'My Digital Card',
+          unique_url: 'test-card',
+          background: 'linear-gradient(to right, #0ea5e9, #2563eb)',
+          created_at: new Date().toISOString(),
+          links: [
+            { id: 1, title: 'Website', url: 'https://example.com', icon: 'globe' },
+            { id: 2, title: 'LinkedIn', url: 'https://linkedin.com', icon: 'linkedin' }
+          ],
+          colors: { primary: '#3B82F6', background: '#0F172A' }
+        })
+      };
+    }
 
-    // Get the request body if it exists
-    let data = null;
-    if (event.body) {
+    // Handle POST /cards - Create a new card
+    if (method === 'POST' && segments.length === 0) {
+      let data;
       try {
         data = JSON.parse(event.body);
-        console.log('Cards request data:', data);
+        console.log('Create card request data:', data);
       } catch (error) {
-        console.error('Error parsing cards request body:', error);
+        console.error('Error parsing create card request body:', error);
         return {
           statusCode: 400,
           headers,
@@ -61,50 +99,83 @@ exports.handler = async (event, context) => {
           })
         };
       }
-    }
 
-    // Get authorization header if it exists
-    const authHeader = event.headers.authorization || event.headers.Authorization;
-    const requestHeaders = {
-      'Content-Type': 'application/json'
-    };
-    if (authHeader) {
-      requestHeaders.Authorization = authHeader;
-    }
-
-    // Make the request to the actual API
-    try {
-      const response = await axios({
-        method: method.toLowerCase(),
-        url,
-        data,
-        headers: requestHeaders,
-        timeout: 10000 // 10 second timeout
-      });
-
-      console.log('Cards request successful');
-
-      // Return the response
+      console.log('Creating mock new card response');
       return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify(response.data)
-      };
-    } catch (apiError) {
-      console.error('API request error:', apiError.message);
-      console.error('API response status:', apiError.response?.status);
-      console.error('API response data:', JSON.stringify(apiError.response?.data));
-
-      return {
-        statusCode: apiError.response?.status || 500,
+        statusCode: 201,
         headers,
         body: JSON.stringify({
-          message: apiError.response?.data?.message || 'Cards request failed',
-          error: apiError.message,
-          details: apiError.response?.data
+          id: 2,
+          title: data.title || 'New Card',
+          unique_url: data.unique_url || 'new-card',
+          background: data.background || 'linear-gradient(to right, #0ea5e9, #2563eb)',
+          created_at: new Date().toISOString(),
+          links: data.links || [],
+          colors: data.colors || { primary: '#3B82F6', background: '#0F172A' }
         })
       };
     }
+
+    // Handle PUT /cards/:id - Update a card
+    if (method === 'PUT' && segments.length === 1) {
+      const cardId = segments[0];
+      let data;
+      try {
+        data = JSON.parse(event.body);
+        console.log(`Update card request data for ID: ${cardId}`, data);
+      } catch (error) {
+        console.error('Error parsing update card request body:', error);
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            message: 'Invalid request body',
+            error: error.message,
+            body: event.body
+          })
+        };
+      }
+
+      console.log(`Creating mock update card response for ID: ${cardId}`);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          id: parseInt(cardId),
+          title: data.title || 'Updated Card',
+          unique_url: data.unique_url || 'updated-card',
+          background: data.background || 'linear-gradient(to right, #0ea5e9, #2563eb)',
+          updated_at: new Date().toISOString(),
+          links: data.links || [],
+          colors: data.colors || { primary: '#3B82F6', background: '#0F172A' }
+        })
+      };
+    }
+
+    // Handle DELETE /cards/:id - Delete a card
+    if (method === 'DELETE' && segments.length === 1) {
+      const cardId = segments[0];
+      console.log(`Creating mock delete card response for ID: ${cardId}`);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          message: `Card with ID ${cardId} deleted successfully`
+        })
+      };
+    }
+
+    // Handle other cards requests
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        message: 'Mock cards endpoint response',
+        path: path,
+        method: method,
+        segments: segments
+      })
+    };
   } catch (error) {
     console.error('Cards function error:', error.message);
     console.error('Error stack:', error.stack);

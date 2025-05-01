@@ -36,7 +36,74 @@ exports.handler = async (event, context) => {
   console.log('Auth HTTP method:', method);
 
   try {
-    // Forward the request to the actual API
+    // Handle profile requests with mock data for testing
+    if (segments.length > 0 && segments[0] === 'profile') {
+      console.log('Creating mock profile response for testing');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          user: {
+            id: 1,
+            name: 'Test User',
+            email: 'test@example.com',
+            is_admin: false
+          },
+          message: 'Mock profile successful'
+        })
+      };
+    }
+
+    // Handle register requests with mock data for testing
+    if (segments.length > 0 && segments[0] === 'register') {
+      // Parse request body
+      let data;
+      try {
+        data = JSON.parse(event.body);
+        console.log('Register request data:', { name: data.name, email: data.email, password: '***' });
+      } catch (error) {
+        console.error('Error parsing register request body:', error);
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({
+            message: 'Invalid request body',
+            error: error.message,
+            body: event.body
+          })
+        };
+      }
+
+      console.log('Creating mock register response for testing');
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          token: 'mock-token-for-testing',
+          user: {
+            id: 1,
+            name: data.name,
+            email: data.email,
+            is_admin: false
+          },
+          message: 'Mock registration successful'
+        })
+      };
+    }
+
+    // For other auth endpoints, return a mock response
+    console.log('Creating mock auth response for testing');
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        message: 'Mock auth endpoint response',
+        path: path,
+        method: method
+      })
+    };
+
+    /* Temporarily commented out real API connection for debugging
     console.log('Forwarding auth request to smart-card.tn');
     const API_URL = 'https://smart-card.tn/api/auth';
     const url = `${API_URL}${path}`;
@@ -79,7 +146,7 @@ exports.handler = async (event, context) => {
         url,
         data,
         headers: requestHeaders,
-        timeout: 10000 // 10 second timeout
+        timeout: 30000 // 30 second timeout
       });
 
       console.log('Auth request successful');
@@ -92,8 +159,16 @@ exports.handler = async (event, context) => {
       };
     } catch (apiError) {
       console.error('API request error:', apiError.message);
-      console.error('API response status:', apiError.response?.status);
-      console.error('API response data:', JSON.stringify(apiError.response?.data));
+      console.error('API error code:', apiError.code);
+      console.error('API error stack:', apiError.stack);
+
+      if (apiError.response) {
+        console.error('API response status:', apiError.response.status);
+        console.error('API response headers:', JSON.stringify(apiError.response.headers));
+        console.error('API response data:', JSON.stringify(apiError.response.data));
+      } else if (apiError.request) {
+        console.error('No response received, request details:', apiError.request._currentUrl);
+      }
 
       return {
         statusCode: apiError.response?.status || 500,
@@ -101,10 +176,12 @@ exports.handler = async (event, context) => {
         body: JSON.stringify({
           message: apiError.response?.data?.message || 'Auth request failed',
           error: apiError.message,
-          details: apiError.response?.data
+          code: apiError.code,
+          details: apiError.response?.data || 'No response data'
         })
       };
     }
+    */
   } catch (error) {
     console.error('Auth function error:', error.message);
     console.error('Error stack:', error.stack);
