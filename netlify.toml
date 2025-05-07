@@ -25,7 +25,7 @@ force = true
 
 [[redirects]]
 from = "/api/auth/register"
-to = "/.netlify/functions/auth-register"
+to = "/.netlify/functions/api/auth/register"
 status = 200
 force = true
 

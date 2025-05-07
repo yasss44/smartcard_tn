@@ -74,6 +74,7 @@
     <button id="directTest">Test Direct Function</button>
     <button id="normalTest">Test Normal Register</button>
     <button id="authRegisterTest">Test Auth Register Function</button>
+    <button id="apiRegisterTest" style="background-color: #8B5CF6;">Test API Register</button>
   </div>
 
   <div id="result">Results will appear here...</div>
@@ -162,6 +163,30 @@
 
         const data = await response.json();
         resultDiv.textContent = 'Auth Register Function Response:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error:\n' + error.message;
+      }
+    });
+
+    document.getElementById('apiRegisterTest').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Sending request to API register endpoint...';
+
+      try {
+        const response = await fetch('/.netlify/functions/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+          })
+        });
+
+        const data = await response.json();
+        resultDiv.textContent = 'API Register Response:\n' + JSON.stringify(data, null, 2);
       } catch (error) {
         resultDiv.textContent = 'Error:\n' + error.message;
       }

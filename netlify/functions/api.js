@@ -56,11 +56,11 @@ exports.handler = async (event, context) => {
 
     // Special handling for auth/register endpoint
     if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'register' && method === 'POST') {
-      console.log('Detected auth/register request, redirecting to direct-register function');
+      console.log('Detected auth/register request, redirecting to auth-register function');
 
-      // Forward to the direct-register function
-      const directRegisterFunction = require('./direct-register');
-      return await directRegisterFunction.handler(event, context);
+      // Forward to the auth-register function
+      const authRegisterFunction = require('./auth-register');
+      return await authRegisterFunction.handler(event, context);
     }
 
     // Special handling for auth/test-register endpoint
