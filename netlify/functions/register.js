@@ -4,6 +4,12 @@ const jwt = require('jsonwebtoken');
 const { testConnection, findUserByEmail } = require('./db-simple');
 
 exports.handler = async (event, context) => {
+  console.log('Register function called with event:', JSON.stringify({
+    path: event.path,
+    httpMethod: event.httpMethod,
+    headers: event.headers,
+    body: event.body ? '(body present)' : '(no body)'
+  }));
   // Set CORS headers
   const origin = event.headers.origin || event.headers.Origin || '*';
   console.log('Register request from origin:', origin);

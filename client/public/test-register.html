@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Registration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background-color: #f9f9f9;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Registration API</h1>
+  
+  <div class="form-group">
+    <label for="name">Name:</label>
+    <input type="text" id="name" value="Test User">
+  </div>
+  
+  <div class="form-group">
+    <label for="email">Email:</label>
+    <input type="email" id="email" value="test@example.com">
+  </div>
+  
+  <div class="form-group">
+    <label for="password">Password:</label>
+    <input type="password" id="password" value="password123">
+  </div>
+  
+  <div class="form-group">
+    <button id="testRegister">Test Register</button>
+    <button id="testRegisterFunction">Test Register Function</button>
+  </div>
+  
+  <div id="result">Results will appear here...</div>
+
+  <script>
+    document.getElementById('testRegister').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Sending request...';
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+          })
+        });
+        
+        const data = await response.json();
+        resultDiv.textContent = 'Response:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error:\n' + error.message;
+      }
+    });
+
+    document.getElementById('testRegisterFunction').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Sending request to test function...';
+      
+      try {
+        const response = await fetch('/api/auth/test-register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+          })
+        });
+        
+        const data = await response.json();
+        resultDiv.textContent = 'Test Function Response:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error:\n' + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
