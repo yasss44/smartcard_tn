@@ -33,7 +33,7 @@ const testConnection = async () => {
 const findUserByEmail = async (email) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM Users WHERE email = ?',
+      'SELECT * FROM users WHERE email = ?',
       [email]
     );
     return rows.length > 0 ? rows[0] : null;
@@ -47,7 +47,7 @@ const findUserByEmail = async (email) => {
 const findUserById = async (id) => {
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM Users WHERE id = ?',
+      'SELECT * FROM users WHERE id = ?',
       [id]
     );
     return rows.length > 0 ? rows[0] : null;

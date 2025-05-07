@@ -117,15 +117,15 @@ exports.handler = async (event, context) => {
         console.log('Getting all cards for user:', userId);
 
         const [cards] = await pool.execute(
-          'SELECT * FROM Cards WHERE UserId = ?',
+          'SELECT * FROM cards WHERE user_id = ?',
           [userId]
         );
 
         // Process the cards to parse JSON fields
         const processedCards = cards.map(card => ({
           ...card,
-          links: JSON.parse(card.links || '[]'),
-          colors: card.colors ? JSON.parse(card.colors) : null
+          links: card.social_links ? JSON.parse(card.social_links) : [],
+          colors: { primary: '#3B82F6', background: '#0F172A' }
         }));
 
         return {
@@ -141,7 +141,7 @@ exports.handler = async (event, context) => {
         console.log(`Getting card with ID: ${cardId}`);
 
         const [cards] = await pool.execute(
-          'SELECT * FROM Cards WHERE id = ? AND UserId = ?',
+          'SELECT * FROM cards WHERE id = ? AND user_id = ?',
           [cardId, userId]
         );
 
@@ -158,8 +158,8 @@ exports.handler = async (event, context) => {
         // Process the card to parse JSON fields
         const card = {
           ...cards[0],
-          links: JSON.parse(cards[0].links || '[]'),
-          colors: cards[0].colors ? JSON.parse(cards[0].colors) : null
+          links: cards[0].social_links ? JSON.parse(cards[0].social_links) : [],
+          colors: { primary: '#3B82F6', background: '#0F172A' }
         };
 
         return {

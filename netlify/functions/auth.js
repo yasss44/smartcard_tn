@@ -143,9 +143,9 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
               user: {
                 id: user.id,
-                name: user.name,
+                name: user.full_name,
                 email: user.email,
-                is_admin: user.is_admin
+                is_admin: user.is_admin || false
               }
             })
           };
@@ -189,7 +189,7 @@ exports.handler = async (event, context) => {
           // Find the user by email
           const { pool } = require('./db-simple');
           const [users] = await pool.execute(
-            'SELECT * FROM Users WHERE email = ?',
+            'SELECT * FROM users WHERE email = ?',
             [data.email]
           );
 
@@ -240,9 +240,9 @@ exports.handler = async (event, context) => {
               token,
               user: {
                 id: user.id,
-                name: user.name,
+                name: user.full_name,
                 email: user.email,
-                is_admin: user.is_admin
+                is_admin: user.is_admin || false
               },
               message: 'Login successful'
             })
@@ -285,7 +285,7 @@ exports.handler = async (event, context) => {
           // Check if user already exists
           const { pool } = require('./db-simple');
           const [existingUsers] = await pool.execute(
-            'SELECT * FROM Users WHERE email = ?',
+            'SELECT * FROM users WHERE email = ?',
             [data.email]
           );
 
@@ -305,7 +305,7 @@ exports.handler = async (event, context) => {
 
           // Create new user
           const [result] = await pool.execute(
-            'INSERT INTO Users (name, email, password, is_admin) VALUES (?, ?, ?, ?)',
+            'INSERT INTO users (full_name, email, password, is_admin) VALUES (?, ?, ?, ?)',
             [data.name, data.email, hashedPassword, false]
           );
 
