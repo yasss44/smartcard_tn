@@ -1,34 +1,7 @@
-import axios from 'axios';
+// Import our custom axios instance
+import api from '../utils/axiosConfig';
 
-// Determine the API URL based on the environment
-const isNetlify = window.location.hostname.includes('netlify.app');
-const API_URL = isNetlify ? '/api' : 'https://smart-card.tn/api';
-
-console.log('Using API URL:', API_URL);
-
-// Configure axios
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  maxContentLength: Infinity,
-  maxBodyLength: Infinity,
-});
-
-// Add token to requests if available
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+console.log('Using custom axios instance from axiosConfig');
 
 // Card API
 export const cardAPI = {
