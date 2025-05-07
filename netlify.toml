@@ -36,6 +36,18 @@ status = 200
 force = true
 
 [[redirects]]
+from = "/api/cards"
+to = "/.netlify/functions/cards"
+status = 200
+force = true
+
+[[redirects]]
+from = "/api/cards/*"
+to = "/.netlify/functions/cards/:splat"
+status = 200
+force = true
+
+[[redirects]]
 from = "/api/auth/login"
 to = "/.netlify/functions/auth-login"
 status = 200
