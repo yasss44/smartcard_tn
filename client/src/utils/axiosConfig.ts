@@ -45,9 +45,9 @@ api.interceptors.request.use(
       }
       // Handle cards requests - GET all cards
       else if (config.url === '/cards' && config.method === 'get') {
-        console.log('Redirecting to cards function');
+        console.log('Redirecting to api-cards function');
         config.baseURL = '';
-        config.url = '/.netlify/functions/cards';
+        config.url = '/.netlify/functions/api-cards';
 
         // Log the full request configuration for debugging
         console.log('Cards request config:', {

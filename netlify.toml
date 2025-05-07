@@ -37,7 +37,7 @@ force = true
 
 [[redirects]]
 from = "/api/cards"
-to = "/.netlify/functions/cards"
+to = "/.netlify/functions/api-cards"
 status = 200
 force = true
 
