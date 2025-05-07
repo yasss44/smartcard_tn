@@ -8,8 +8,15 @@ exports.handler = async (event, context) => {
     path: event.path,
     httpMethod: event.httpMethod,
     headers: event.headers,
-    body: event.body ? '(body present)' : '(no body)'
+    queryStringParameters: event.queryStringParameters,
+    body: event.body ? '(body present)' : '(no body)',
+    isBase64Encoded: event.isBase64Encoded,
+    rawUrl: event.rawUrl || 'not available'
   }));
+
+  // Log the raw path to help diagnose routing issues
+  console.log('Raw path:', event.path);
+  console.log('Raw URL:', event.rawUrl || 'not available');
   // Set CORS headers
   const origin = event.headers.origin || event.headers.Origin || '*';
   console.log('Register request from origin:', origin);

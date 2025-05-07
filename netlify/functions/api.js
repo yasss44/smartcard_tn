@@ -35,6 +35,14 @@ exports.handler = async (event, context) => {
   console.log('API request path:', path);
   console.log('API path segments:', segments);
   console.log('API HTTP method:', method);
+  console.log('Full event object:', JSON.stringify({
+    path: event.path,
+    httpMethod: event.httpMethod,
+    headers: event.headers,
+    queryStringParameters: event.queryStringParameters,
+    body: event.body ? '(body present)' : '(no body)',
+    isBase64Encoded: event.isBase64Encoded
+  }));
 
   try {
     // If this is a root request, return a simple message
@@ -53,6 +61,15 @@ exports.handler = async (event, context) => {
       // Forward to the register function
       const registerFunction = require('./register');
       return await registerFunction.handler(event, context);
+    }
+
+    // Special handling for auth/test-register endpoint
+    if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'test-register') {
+      console.log('Detected auth/test-register request, redirecting to test-register function');
+
+      // Forward to the test-register function
+      const testRegisterFunction = require('./test-register');
+      return await testRegisterFunction.handler(event, context);
     }
 
     // Forward the request to the actual API
