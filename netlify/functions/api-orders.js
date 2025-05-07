@@ -108,7 +108,7 @@ exports.handler = async (event, context) => {
         };
       } catch (error) {
         console.error('Error getting orders:', error.message);
-        
+
         // If the error is about the table not existing, return an empty array
         if (error.message.includes("doesn't exist")) {
           console.log('Orders table does not exist, returning empty array');
@@ -118,7 +118,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify([])
           };
         }
-        
+
         throw error;
       }
     }
@@ -156,11 +156,44 @@ exports.handler = async (event, context) => {
       }
 
       try {
+        // Check if the orders table exists
+        try {
+          await pool.execute('DESCRIBE orders');
+          console.log('Orders table exists');
+        } catch (error) {
+          if (error.message.includes("doesn't exist")) {
+            console.log('Orders table does not exist, creating it');
+            await pool.execute(`
+              CREATE TABLE IF NOT EXISTS orders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                plan_id INT NOT NULL,
+                quantity INT DEFAULT 1,
+                total_price DECIMAL(10, 2) NOT NULL,
+                shipping_price DECIMAL(10, 2) DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'pending',
+                shipping_address TEXT,
+                phone VARCHAR(50),
+                card_name VARCHAR(255),
+                logo_file VARCHAR(255),
+                design_file VARCHAR(255),
+                card_created BOOLEAN DEFAULT FALSE,
+                card_id INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+              )
+            `);
+            console.log('Orders table created successfully');
+          } else {
+            throw error;
+          }
+        }
+
         // Insert the order into the database
         const [result] = await pool.execute(
           `INSERT INTO orders (
-            user_id, plan_id, quantity, total_price, shipping_price, 
-            status, shipping_address, phone, card_name, logo_file, 
+            user_id, plan_id, quantity, total_price, shipping_price,
+            status, shipping_address, phone, card_name, logo_file,
             design_file, card_created
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [

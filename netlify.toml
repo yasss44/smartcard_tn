@@ -97,6 +97,12 @@ status = 200
 force = true
 
 [[redirects]]
+from = "/test-orders.html"
+to = "/test-orders.html"
+status = 200
+force = true
+
+[[redirects]]
 from = "/*"
 to = "/index.html"
 status = 200
