@@ -61,6 +61,12 @@ status = 200
 force = false
 
 [[redirects]]
+from = "/direct-test.html"
+to = "/direct-test.html"
+status = 200
+force = true
+
+[[redirects]]
 from = "/*"
 to = "/index.html"
 status = 200
