@@ -46,6 +46,15 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Special handling for auth/register endpoint
+    if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'register' && method === 'POST') {
+      console.log('Detected auth/register request, redirecting to register function');
+
+      // Forward to the register function
+      const registerFunction = require('./register');
+      return await registerFunction.handler(event, context);
+    }
+
     // Forward the request to the actual API
     console.log('Forwarding API request to smart-card.tn');
     const API_URL = 'https://smart-card.tn/api';
