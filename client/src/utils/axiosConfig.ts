@@ -84,6 +84,33 @@ api.interceptors.request.use(
         config.baseURL = '';
         config.url = `/.netlify/functions/cards/${cardId}`;
       }
+      // Handle orders requests - GET all orders
+      else if (config.url === '/orders' && config.method === 'get') {
+        console.log('Redirecting to api-orders function');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/api-orders';
+
+        // Log the full request configuration for debugging
+        console.log('Orders request config:', {
+          method: config.method,
+          url: config.url,
+          baseURL: config.baseURL,
+          headers: config.headers
+        });
+      }
+      // Handle orders requests - POST new order
+      else if (config.url === '/orders' && config.method === 'post') {
+        console.log('Redirecting to api-orders function for POST');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/api-orders';
+      }
+      // Handle orders requests - GET specific order
+      else if (config.url?.startsWith('/orders/') && config.method === 'get') {
+        console.log('Redirecting to orders function with ID');
+        const orderId = config.url.split('/')[2];
+        config.baseURL = '';
+        config.url = `/.netlify/functions/orders/${orderId}`;
+      }
       // Handle other API requests
       else {
         console.log('Using API function for request');

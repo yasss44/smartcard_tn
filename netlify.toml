@@ -42,6 +42,12 @@ status = 200
 force = true
 
 [[redirects]]
+from = "/api/orders"
+to = "/.netlify/functions/api-orders"
+status = 200
+force = true
+
+[[redirects]]
 from = "/api/cards/*"
 to = "/.netlify/functions/cards/:splat"
 status = 200
