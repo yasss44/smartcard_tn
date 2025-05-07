@@ -67,6 +67,10 @@
   </div>
 
   <div class="form-group">
+    <button id="setupDb" style="background-color: #EC4899;">Setup Database</button>
+  </div>
+
+  <div class="form-group">
     <button id="directTest">Test Direct Function</button>
     <button id="normalTest">Test Normal Register</button>
     <button id="authRegisterTest">Test Auth Register Function</button>
@@ -75,6 +79,22 @@
   <div id="result">Results will appear here...</div>
 
   <script>
+    document.getElementById('setupDb').addEventListener('click', async () => {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = 'Setting up database...';
+
+      try {
+        const response = await fetch('/.netlify/functions/db-setup', {
+          method: 'GET'
+        });
+
+        const data = await response.json();
+        resultDiv.textContent = 'Database Setup Response:\n' + JSON.stringify(data, null, 2);
+      } catch (error) {
+        resultDiv.textContent = 'Error:\n' + error.message;
+      }
+    });
+
     document.getElementById('directTest').addEventListener('click', async () => {
       const resultDiv = document.getElementById('result');
       resultDiv.textContent = 'Sending request to direct function...';

@@ -12,6 +12,12 @@ status = 200
 force = true
 
 [[redirects]]
+from = "/.netlify/functions/db-setup"
+to = "/.netlify/functions/db-setup"
+status = 200
+force = true
+
+[[redirects]]
 from = "/api/auth/test-register"
 to = "/.netlify/functions/test-register"
 status = 200
