@@ -21,12 +21,34 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Special handling for registration requests on Netlify
-    if (isNetlify && config.url === '/auth/register' && config.method === 'post') {
-      console.log('Intercepting registration request');
-      // Modify the URL to use the direct function
-      config.baseURL = '';
-      config.url = '/.netlify/functions/auth-register';
+    // Special handling for Netlify requests
+    if (isNetlify) {
+      console.log(`Intercepting request: ${config.method} ${config.url}`);
+
+      // Handle registration requests
+      if (config.url === '/auth/register' && config.method === 'post') {
+        console.log('Redirecting to auth-register function');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/auth-register';
+      }
+      // Handle profile requests
+      else if (config.url === '/auth/profile' && config.method === 'get') {
+        console.log('Redirecting to auth-profile function');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/auth-profile';
+      }
+      // Handle cards requests
+      else if (config.url === '/cards' && config.method === 'get') {
+        console.log('Redirecting to cards function');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/cards';
+      }
+      // Handle other API requests
+      else {
+        console.log('Using API function for request');
+        config.baseURL = '';
+        config.url = `/.netlify/functions/api${config.url}`;
+      }
     }
 
     return config;

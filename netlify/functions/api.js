@@ -63,6 +63,15 @@ exports.handler = async (event, context) => {
       return await authRegisterFunction.handler(event, context);
     }
 
+    // Special handling for auth/profile endpoint
+    if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'profile' && method === 'GET') {
+      console.log('Detected auth/profile request, redirecting to auth-profile function');
+
+      // Forward to the auth-profile function
+      const authProfileFunction = require('./auth-profile');
+      return await authProfileFunction.handler(event, context);
+    }
+
     // Special handling for auth/test-register endpoint
     if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'test-register') {
       console.log('Detected auth/test-register request, redirecting to test-register function');
@@ -70,6 +79,15 @@ exports.handler = async (event, context) => {
       // Forward to the test-register function
       const testRegisterFunction = require('./test-register');
       return await testRegisterFunction.handler(event, context);
+    }
+
+    // Special handling for cards endpoint
+    if (segments.length >= 1 && segments[0] === 'cards') {
+      console.log('Detected cards request, redirecting to cards function');
+
+      // Forward to the cards function
+      const cardsFunction = require('./cards');
+      return await cardsFunction.handler(event, context);
     }
 
     // Forward the request to the actual API
