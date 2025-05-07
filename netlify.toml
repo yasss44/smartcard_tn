@@ -37,7 +37,7 @@ force = true
 
 [[redirects]]
 from = "/api/auth/login"
-to = "/.netlify/functions/login"
+to = "/.netlify/functions/auth-login"
 status = 200
 force = true
 

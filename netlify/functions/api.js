@@ -63,6 +63,15 @@ exports.handler = async (event, context) => {
       return await authRegisterFunction.handler(event, context);
     }
 
+    // Special handling for auth/login endpoint
+    if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'login' && method === 'POST') {
+      console.log('Detected auth/login request, redirecting to auth-login function');
+
+      // Forward to the auth-login function
+      const authLoginFunction = require('./auth-login');
+      return await authLoginFunction.handler(event, context);
+    }
+
     // Special handling for auth/profile endpoint
     if (segments.length >= 2 && segments[0] === 'auth' && segments[1] === 'profile' && method === 'GET') {
       console.log('Detected auth/profile request, redirecting to auth-profile function');

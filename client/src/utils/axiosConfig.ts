@@ -31,6 +31,12 @@ api.interceptors.request.use(
         config.baseURL = '';
         config.url = '/.netlify/functions/auth-register';
       }
+      // Handle login requests
+      else if (config.url === '/auth/login' && config.method === 'post') {
+        console.log('Redirecting to auth-login function');
+        config.baseURL = '';
+        config.url = '/.netlify/functions/auth-login';
+      }
       // Handle profile requests
       else if (config.url === '/auth/profile' && config.method === 'get') {
         console.log('Redirecting to auth-profile function');
