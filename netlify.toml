@@ -10,6 +10,11 @@ to = "/.netlify/functions/login"
 status = 200
 
 [[redirects]]
+from = "/api/auth/register"
+to = "/.netlify/functions/register"
+status = 200
+
+[[redirects]]
 from = "/api/auth/*"
 to = "/.netlify/functions/auth/:splat"
 status = 200

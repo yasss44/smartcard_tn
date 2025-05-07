@@ -263,6 +263,7 @@ exports.handler = async (event, context) => {
         }
       } else if (segments.length > 0 && segments[0] === 'register' && method === 'POST') {
         console.log('Handling register request directly with database');
+        console.log('Registration data:', JSON.stringify(data));
 
         try {
           // Validate required fields
@@ -279,8 +280,10 @@ exports.handler = async (event, context) => {
           // Test database connection
           const isConnected = await testConnection();
           if (!isConnected) {
+            console.error('Database connection failed during registration');
             throw new Error('Database connection failed');
           }
+          console.log('Database connected successfully for registration');
 
           // Check if user already exists
           const { pool } = require('./db-simple');
@@ -339,6 +342,7 @@ exports.handler = async (event, context) => {
         } catch (registerError) {
           console.error('Register request error:', registerError.message);
           console.error('Register error stack:', registerError.stack);
+          console.error('Full register error object:', JSON.stringify(registerError, Object.getOwnPropertyNames(registerError)));
 
           return {
             statusCode: 500,
@@ -346,7 +350,8 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
               message: 'Registration failed',
               error: registerError.message,
-              stack: registerError.stack
+              stack: registerError.stack,
+              details: 'Check Netlify function logs for more information'
             })
           };
         }
