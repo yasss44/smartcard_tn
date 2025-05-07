@@ -4,6 +4,13 @@ publish = "client/dist"
 command = "node build.js && npm install && cd client && npm install && npm run build"
 functions = "netlify/functions"
 
+# Direct function access
+[[redirects]]
+from = "/.netlify/functions/direct-register"
+to = "/.netlify/functions/direct-register"
+status = 200
+force = true
+
 [[redirects]]
 from = "/api/auth/test-register"
 to = "/.netlify/functions/test-register"
