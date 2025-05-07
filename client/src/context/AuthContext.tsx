@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 interface User {
   id: number;
@@ -38,30 +38,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Set up axios defaults
-  const isNetlify = window.location.hostname.includes('netlify.app');
-  const API_URL = isNetlify ? '/api' : 'https://smart-card.tn/api';
-
-  console.log('AuthContext using API URL:', API_URL);
-
-  // Configure axios with token
+  // Log authentication status
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
+    console.log('AuthContext authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+  }, [isAuthenticated]);
 
   // Load user if token exists
   useEffect(() => {
     const loadUser = async () => {
       if (token) {
         try {
-          const res = await axios.get(`${API_URL}/auth/profile`);
+          const res = await api.get('/auth/profile');
           setUser(res.data.user);
           setIsAuthenticated(true);
         } catch (error) {
+          console.error('Error loading user profile:', error);
           localStorage.removeItem('token');
           setToken(null);
           setUser(null);
@@ -77,12 +68,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Login user
   const login = async (email: string, password: string) => {
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, { email, password });
+      console.log('Logging in user:', email);
+      const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setIsAuthenticated(true);
+      console.log('Login successful');
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   };
@@ -90,12 +84,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Register user
   const register = async (name: string, email: string, password: string) => {
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, { name, email, password });
+      console.log('Registering user:', email);
+      const res = await api.post('/auth/register', { name, email, password });
       localStorage.setItem('token', res.data.token);
       setToken(res.data.token);
       setUser(res.data.user);
       setIsAuthenticated(true);
+      console.log('Registration successful');
     } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   };
