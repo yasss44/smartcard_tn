@@ -116,23 +116,39 @@ exports.handler = async (event, context) => {
       if (method === 'GET' && segments.length === 0) {
         console.log('Getting all cards for user:', userId);
 
-        const [cards] = await pool.execute(
-          'SELECT * FROM cards WHERE user_id = ?',
-          [userId]
-        );
+        try {
+          const [cards] = await pool.execute(
+            'SELECT * FROM cards WHERE user_id = ?',
+            [userId]
+          );
 
-        // Process the cards to parse JSON fields
-        const processedCards = cards.map(card => ({
-          ...card,
-          links: card.social_links ? JSON.parse(card.social_links) : [],
-          colors: { primary: '#3B82F6', background: '#0F172A' }
-        }));
+          // Process the cards to parse JSON fields
+          const processedCards = cards.map(card => ({
+            ...card,
+            links: card.social_links ? JSON.parse(card.social_links) : [],
+            colors: { primary: '#3B82F6', background: '#0F172A' }
+          }));
 
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(processedCards)
-        };
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(processedCards)
+          };
+        } catch (error) {
+          console.error('Error getting cards:', error.message);
+
+          // If the error is about the table not existing, return an empty array
+          if (error.message.includes("doesn't exist")) {
+            console.log('Cards table does not exist, returning empty array');
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify([])
+            };
+          }
+
+          throw error;
+        }
       }
 
       // Handle GET /cards/:id - Get a card by ID
@@ -140,33 +156,51 @@ exports.handler = async (event, context) => {
         const cardId = segments[0];
         console.log(`Getting card with ID: ${cardId}`);
 
-        const [cards] = await pool.execute(
-          'SELECT * FROM cards WHERE id = ? AND user_id = ?',
-          [cardId, userId]
-        );
+        try {
+          const [cards] = await pool.execute(
+            'SELECT * FROM cards WHERE id = ? AND user_id = ?',
+            [cardId, userId]
+          );
 
-        if (cards.length === 0) {
-          return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({
-              message: 'Card not found'
-            })
+          if (cards.length === 0) {
+            return {
+              statusCode: 404,
+              headers,
+              body: JSON.stringify({
+                message: 'Card not found'
+              })
+            };
+          }
+
+          // Process the card to parse JSON fields
+          const card = {
+            ...cards[0],
+            links: cards[0].social_links ? JSON.parse(cards[0].social_links) : [],
+            colors: { primary: '#3B82F6', background: '#0F172A' }
           };
+
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(card)
+          };
+        } catch (error) {
+          console.error('Error getting card by ID:', error.message);
+
+          // If the error is about the table not existing, return a 404
+          if (error.message.includes("doesn't exist")) {
+            console.log('Cards table does not exist, returning 404');
+            return {
+              statusCode: 404,
+              headers,
+              body: JSON.stringify({
+                message: 'Card not found'
+              })
+            };
+          }
+
+          throw error;
         }
-
-        // Process the card to parse JSON fields
-        const card = {
-          ...cards[0],
-          links: cards[0].social_links ? JSON.parse(cards[0].social_links) : [],
-          colors: { primary: '#3B82F6', background: '#0F172A' }
-        };
-
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify(card)
-        };
       }
 
       // For other endpoints, return a not implemented response

@@ -48,6 +48,14 @@ api.interceptors.request.use(
         console.log('Redirecting to cards function');
         config.baseURL = '';
         config.url = '/.netlify/functions/cards';
+
+        // Log the full request configuration for debugging
+        console.log('Cards request config:', {
+          method: config.method,
+          url: config.url,
+          baseURL: config.baseURL,
+          headers: config.headers
+        });
       }
       // Handle cards requests - GET specific card
       else if (config.url?.startsWith('/cards/') && config.method === 'get') {
